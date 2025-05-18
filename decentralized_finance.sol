@@ -122,6 +122,13 @@ contract DecentralizedFinance is ERC20 {
     }
 
     function checkLoan(uint256 loanId) external {
-        // TODO: implement this
+        require(msg.sender == owner, "Only the owner can check loan status");
+        Loan storage loan = loans[loanId];
+        require(loan.termination == 0, "Loan already terminated");
+
+        if (block.timestamp > loan.deadline) {
+            // TODO: Implement logic for Punish the loan
+            loan.termination = block.timestamp;
+        }
     }
 }
