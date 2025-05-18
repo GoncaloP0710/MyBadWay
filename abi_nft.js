@@ -1,0 +1,1 @@
+export const nft_abi = [ paste-the-ABI-here ];
