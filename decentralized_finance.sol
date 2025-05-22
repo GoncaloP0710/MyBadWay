@@ -18,31 +18,53 @@ contract DecentralizedFinance is ERC20 {
         IERC721 nftContract;
         uint256 nftId;
     }
+
     uint public maxLoanDuration;
     uint public dexSwapRate;
     uint public balance;
 
-    mapping(uint256 => Loan) public loans;
+    uint private rate;
+    uint private periodicity;
+    uint private interest;
+    uint private termination;
 
     uint256 public loanCount; // TODO: Criei para dar set do ID da loan, podemos retirar depois idk
+    uint256 public nftCount; // TODO: Criei para dar set do ID da loan, podemos retirar depois idk
+    
+    // --------------------- Mapping ---------------------
+    mapping(uint256 => Loan) public loans;
 
+    // --------------------- Events ---------------------
+    event buyDex(address indexed buyer, uint256 amount);
+    event sellDex(address indexed seller, uint256 amount);
     event loanCreated(address indexed borrower, uint256 amount, uint256 deadline);
+    event returnLoan(address indexed borrower, uint256 amount, uint256 loanId);
 
-    constructor() ERC20("DEX", "DEX") {
+    constructor(uint256 rate, uint256 periodicity, uint256 interest, uint256 termination) ERC20("DEX", "DEX") {
         _mint(address(this), 10**18);
+        owner = msg.sender;
+        rate = rate;
+        periodicity = periodicity;
+        interest = interest;
+        termination = termination;
+        
+        // Check where the values should come from
+        maxLoanDuration = 30 days; // TODO: Definir o maximo de tempo
+        dexSwapRate = 1000; // TODO: Definir o valor de swap rate
 
     }
 
     function buyDex() external payable {
         require(msg.value > 0, "Value must be greater than 0");
+        
         uint256 dexAmount = msg.value * dexSwapRate;
         _transfer(address(this), msg.sender, dexAmount);
     }
 
     function sellDex(uint256 dexAmount) external {
-        require(dexAmount > 0, "Amount must be greater than 0");
         require(balanceOf(msg.sender) >= dexAmount, "Insufficient DEX balance");
         require(address(this).balance >= dexAmount / dexSwapRate, "Insufficient ETH balance in contract"); //TODO: SUS VERIRICR DEPOIS 
+        
         uint256 ethAmount = dexAmount / dexSwapRate;
         _transfer(msg.sender, address(this), dexAmount);
         payable(msg.sender).transfer(ethAmount);
@@ -76,6 +98,8 @@ contract DecentralizedFinance is ERC20 {
             nftId: loanCount // TODO: SUS
         });
 
+        uint256 loanAmount = uint256(ethAmount) * dexSwapRate; // TODO: o que é o loanAmount?
+
         emit loanCreated(msg.sender, loanAmount, deadline);
     }
 
@@ -85,6 +109,8 @@ contract DecentralizedFinance is ERC20 {
         require(!loan.isBasedNFT, "NFT-based loans must use a different function");
         require(loan.termination == 0, "Loan already terminated");
         require(msg.value >= uint256(loan.amount), "Insufficient repayment amount");
+
+        // TODO: FALTA A FEE
 
         uint256 refund = uint256(loan.amount); // TOOD: nao sei se é preciso adicionar fee
 
@@ -98,10 +124,10 @@ contract DecentralizedFinance is ERC20 {
         return address(this).balance;
     }
 
-    function setDexSwapRate(uint256 rate) external { // TODO: Nao esta no enunciado
-        require(msg.sender == owner, "Only the owner can set the swap rate");
-        dexSwapRate = rate;
-    }
+    // function setDexSwapRate(uint256 rate) external { // TODO: Nao esta no enunciado
+    //     require(msg.sender == owner, "Only the owner can set the swap rate");
+    //     dexSwapRate = rate;
+    // }
 
     function getDexBalance() public view returns (uint256) {
         return balanceOf(address(this));
