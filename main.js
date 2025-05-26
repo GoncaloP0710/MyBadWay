@@ -28,7 +28,7 @@ async function connectMetaMask() {
     }
 }
 
-async function buyDex() {
+async function buyDex(ethAmount) {
     const accounts = await window.ethereum.request({
         method: "eth_requestAccounts",
     });
@@ -39,7 +39,7 @@ async function buyDex() {
         console.log("Sending value:", web3_ganache.utils.toWei("1", "ether"));
         const buyResult = await defi_contract.methods.buyDex().send({
             from: account,
-            value: web3_ganache.utils.toWei("1", "ether") // Sending 1 ETH
+            value: web3_ganache.utils.toWei(ethAmount.toString(), "ether") // Sending 1 ETH
         });        console.log("DEX tokens bought successfully:", buyResult);
         return buyResult;
     } catch (error) {
@@ -48,14 +48,16 @@ async function buyDex() {
     }
 }
 
-async function sellDex() {
+async function sellDex(dexAmount) {
     const accounts = await window.ethereum.request({
         method: "eth_requestAccounts",
     });
     const account = accounts[0];
     try {
         console.log("Selling DEX tokens for account:", account);
-        const sellResult = await defi_contract.methods.sellDex().send({ from: account, value: web3_ganache.utils.toWei("1", "ether") });
+        const sellResult = await defi_contract.methods.sellDex(dexAmount).send({ 
+            from: account, 
+        });
         console.log("DEX tokens sold successfully:", sellResult);
         return sellResult;
     } catch (error) {
@@ -196,8 +198,23 @@ window.getAvailableNfts = getAvailableNfts;
 // windows.getAllTokenURIs = getAllTokenURIs;
 
 document.addEventListener("DOMContentLoaded", () => {
-    document.getElementById("buyDexBtn").onclick = buyDex;
-    document.getElementById("sellDexBtn").onclick = sellDex;
+    document.getElementById("buyDexBtn").onclick = async () => {
+        const ethAmount = parseInt(prompt("Quantos ETH você quer usar para comprar DEX? (apenas número inteiro)"));
+        if (!isNaN(ethAmount) && ethAmount > 0) {
+            await buyDex(ethAmount);
+        } else {
+            alert("Valor inválido.");
+        }
+    };
+
+    document.getElementById("sellDexBtn").onclick = async () => {
+        const dexAmount = parseInt(prompt("Quantos DEX você quer vender? (apenas número inteiro)"));
+        if (!isNaN(dexAmount) && dexAmount > 0) {
+            await sellDex(dexAmount);
+        } else {
+            alert("Valor inválido.");
+        }
+    };
     document.getElementById("requestLoanBtn").onclick = () => {
         const dexAmount = prompt("DEX amount?");
         const deadline = prompt("Deadline (timestamp)?");
