@@ -8,7 +8,7 @@ contract DecentralizedFinance is ERC20 {
     address public owner;
     struct Loan {
         uint deadline;
-        int256 amount;
+        uint256 amount;
         uint periodicity;
         uint256 interestRate;
         uint256 termination;
@@ -57,13 +57,10 @@ contract DecentralizedFinance is ERC20 {
 
         maxLoanDuration = 30 days;
         dexSwapRate = 1000;
+        loanCount = 0;
     }
 
-    event DebugValue(uint256 value);
-
-
     function buyDex() external payable {
-        emit DebugValue(msg.value); // Log the value of msg.value
         require(msg.value > 0, "Value must be greater than 0");
         
         uint256 dexAmount = msg.value * dexSwapRate;
@@ -83,8 +80,8 @@ contract DecentralizedFinance is ERC20 {
 
     function loan(uint256 dexAmount, uint256 deadline) external {
         require(dexAmount > 0, "DEX amount must be greater than 0");
-        require(deadline > block.timestamp, "Deadline must be in the future");
-        require(deadline <= block.timestamp + maxLoanDuration, "Deadline exceeds max loan duration");
+        // require(deadline > block.timestamp, "Deadline must be in the future");
+        require(deadline <= maxLoanDuration, "Deadline exceeds max loan duration");
         require(balanceOf(msg.sender) >= dexAmount, "Insufficient DEX balance");
         require(address(this).balance >= dexAmount / dexSwapRate, "Insufficient ETH in contract");
 
@@ -92,26 +89,23 @@ contract DecentralizedFinance is ERC20 {
         uint256 ethAmount = dexAmount / dexSwapRate;
         payable(msg.sender).transfer(ethAmount);
 
-        uint256 loanId = uint256(keccak256(abi.encodePacked(msg.sender, block.timestamp, dexAmount)));
-
+        uint256 loanId = uint256(loanCount);
         loanCount++;
 
         loans[loanId] = Loan({
             deadline: deadline,
-            amount: int256(ethAmount),
-            periodicity: 0, // TODO: IDK esses valores
-            interestRate: 0, 
-            termination: 0,
+            amount: ethAmount,
+            periodicity: 5, // TODO: IDK esses valores
+            interestRate: 12, 
+            termination: 10,
             lender: address(this),
             borrower: msg.sender,
             isBasedNFT: false,
-            nftContract: IERC721(address(0)),
+            nftContract: IERC721(address(0)), // Not applicable for DEX loans
             nftId: loanCount // TODO: SUS
         });
 
-        uint256 loanAmount = uint256(ethAmount) * dexSwapRate; // TODO: o que é o loanAmount?
-
-        emit loanCreated(msg.sender, uint256(loan.amount), deadline);
+        emit loanCreated(msg.sender, ethAmount, deadline);
         dex_lock_in += dexAmount;
     }
 

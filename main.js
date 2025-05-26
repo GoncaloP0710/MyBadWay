@@ -2,7 +2,7 @@
 const web3_ganache = new Web3(new Web3.providers.HttpProvider('http://127.0.0.1:8545'));
 
 // the part is related to the DecentralizedFinance smart contract
-const defi_contractAddress = "0x5a404632DF0C8388708cF3922c739f9f71ac988e";
+const defi_contractAddress = "0x53B35122b390FAF861dbA8feD65c1bac5F9206D0";
 import { defi_abi } from "./abi_decentralized_finance.js";
 const defi_contract = new web3_ganache.eth.Contract(defi_abi, defi_contractAddress);
 
@@ -75,24 +75,17 @@ async function checkLoanStatus(loan) {
         console.log("Checking loan status for loan:", loan);
         console.log(loan_dict[loan]);
 
-        const loanStatus = await defi_contract.methods.checkLoan(loan_dict[loan]).send({ from: account, });
+        const loanStatus = await defi_contract.methods.checkLoan(loan_dict[loan]).send({ 
+            from: account, 
+        });
+
         console.log("Loan status:", loanStatus);
         return loanStatus;
     } catch (error) {
         console.error("Error checking loan status:", error);
         throw error;
     }
-}
-
-async function listenToDebugValue() {
-    defi_contract.events.DebugValue({}, (error, event) => {
-        if (!error) {
-            console.log("Debug value:", event.returnValues.value);
-        } else {
-            console.error("Erro ao escutar debugValue:", error);
-        }
-    });
-}   
+}  
 
 async function listenToLoanCreation() {
     defi_contract.events.loanCreated({}, (error, event) => {
@@ -115,7 +108,9 @@ async function loan(dexAmount, deadline) {
     const account = accounts[0];
     try {
         console.log("Requesting loan for account:", account, "with amount:", dexAmount, "and deadline:", deadline);
-        const loanResult = await defi_contract.methods.loan(dexAmount, deadline).send({ from: account });
+        const loanResult = await defi_contract.methods.loan(dexAmount, deadline).send({ 
+            from: account 
+        });
         console.log("Loan requested successfully:", loanResult);
         return loanResult;
     } catch (error) {
@@ -180,6 +175,46 @@ async function getAllTokenURIs() {
     // TODO: implement this
 }
 
+async function getDexBalance() {
+    try {
+        const dexBalance = await defi_contract.methods.getDexBalance().call();
+
+        // Considerando 18 casas decimais
+        document.getElementById("dexBalanceOutput").innerText = 
+            `Saldo DEX no contrato: ${web3_ganache.utils.fromWei(dexBalance, "ether")} DEX`;
+        return dexBalance;
+    } catch (error) {
+        document.getElementById("dexBalanceOutput").innerText = "Erro ao buscar saldo DEX.";
+        console.error("Erro ao buscar saldo DEX:", error);
+    }
+}
+
+async function getEthBalance() {
+    try {
+        const ethBalance = await defi_contract.methods.getBalance().call();
+        document.getElementById("ethBalanceOutput").innerText = 
+            `Saldo ETH do user: ${web3_ganache.utils.fromWei(ethBalance, "ether")} ETH`;
+        return ethBalance;
+    } catch (error) {
+        document.getElementById("ethBalanceOutput").innerText = "Erro ao buscar saldo ETH.";
+        console.error("Erro ao buscar saldo ETH:", error);
+    }
+}
+
+async function getUserDexBalance() {
+    try {
+        const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+        const account = accounts[0];
+        const dexBalance = await defi_contract.methods.balanceOf(account).call();
+        document.getElementById("dexUserBalanceOutput").innerText =
+            `Seu saldo DEX: ${web3_ganache.utils.fromWei(dexBalance, "ether")} DEX`;
+        return dexBalance;
+    } catch (error) {
+        document.getElementById("dexUserBalanceOutput").innerText = "Erro ao buscar seu saldo DEX.";
+        console.error("Erro ao buscar saldo DEX do usuário:", error);
+    }
+}
+
 window.connectMetaMask = connectMetaMask;
 window.buyDex = buyDex;
 window.sellDex = sellDex;
@@ -193,6 +228,8 @@ window.loanByNft = loanByNft;
 window.checkLoan = checkLoan;
 window.listenToLoanCreation = listenToLoanCreation;
 window.getAvailableNfts = getAvailableNfts;
+window.getDexBalance = getDexBalance;
+window.getEthBalance = getEthBalance;
 // windows.getTotalBorrowedAndNotPaidBackEth = getTotalBorrowedAndNotPaidBackEth;
 // windows.checkLoanStatus = checkLoanStatus;
 // windows.getAllTokenURIs = getAllTokenURIs;
@@ -234,4 +271,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("repayNftLoanBtn").onclick = () => {
         alert("Função de repagamento de NFT ainda não implementada.");
     };
+    document.getElementById("getDexBalanceBtn").onclick = getDexBalance;
+    document.getElementById("getEthBalanceBtn").onclick = getEthBalance;
+    document.getElementById("getDexUserBalanceBtn").onclick = getUserDexBalance;
 });
