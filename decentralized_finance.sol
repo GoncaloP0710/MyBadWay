@@ -59,7 +59,11 @@ contract DecentralizedFinance is ERC20 {
         dexSwapRate = 1000;
     }
 
+    event DebugValue(uint256 value);
+
+
     function buyDex() external payable {
+        emit DebugValue(msg.value); // Log the value of msg.value
         require(msg.value > 0, "Value must be greater than 0");
         
         uint256 dexAmount = msg.value * dexSwapRate;

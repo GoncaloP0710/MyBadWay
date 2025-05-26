@@ -1,8 +1,8 @@
-//const web3 = new Web3(window.ethereum);
+// const web3 = new Web3(window.ethereum);
 const web3_ganache = new Web3(new Web3.providers.HttpProvider('http://127.0.0.1:8545'));
 
 // the part is related to the DecentralizedFinance smart contract
-const defi_contractAddress = "0x888eaC10E0e0989825F825Bf375e68a2f7CEC55B";
+const defi_contractAddress = "0xF416E1b49723F9dD0F3BB986C283dC27319e926e";
 import { defi_abi } from "./abi_decentralized_finance.js";
 const defi_contract = new web3_ganache.eth.Contract(defi_abi, defi_contractAddress);
 
@@ -35,6 +35,7 @@ async function buyDex() {
     const account = accounts[0];
     try {
         console.log("Buying DEX tokens for account:", account);
+        console.log("Using contract address:", defi_contractAddress);
         console.log("Sending value:", web3.utils.toWei("1", "ether"));
         await defi_contract.methods.buyDex().send({
             from: account,
@@ -80,6 +81,16 @@ async function checkLoanStatus(loan) {
         throw error;
     }
 }
+
+async function listenToDebugValue() {
+    defi_contract.events.DebugValue({}, (error, event) => {
+        if (!error) {
+            console.log("Debug value:", event.returnValues.value);
+        } else {
+            console.error("Erro ao escutar debugValue:", error);
+        }
+    });
+}   
 
 async function listenToLoanCreation() {
     defi_contract.events.loanCreated({}, (error, event) => {
