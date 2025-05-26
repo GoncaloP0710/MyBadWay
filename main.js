@@ -2,7 +2,7 @@
 const web3_ganache = new Web3(new Web3.providers.HttpProvider('http://127.0.0.1:8545'));
 
 // the part is related to the DecentralizedFinance smart contract
-const defi_contractAddress = "0xF416E1b49723F9dD0F3BB986C283dC27319e926e";
+const defi_contractAddress = "0x5a404632DF0C8388708cF3922c739f9f71ac988e";
 import { defi_abi } from "./abi_decentralized_finance.js";
 const defi_contract = new web3_ganache.eth.Contract(defi_abi, defi_contractAddress);
 
@@ -36,10 +36,10 @@ async function buyDex() {
     try {
         console.log("Buying DEX tokens for account:", account);
         console.log("Using contract address:", defi_contractAddress);
-        console.log("Sending value:", web3.utils.toWei("1", "ether"));
-        await defi_contract.methods.buyDex().send({
+        console.log("Sending value:", web3_ganache.utils.toWei("1", "ether"));
+        const buyResult = await defi_contract.methods.buyDex().send({
             from: account,
-            value: web3.utils.toWei("1", "ether") // Sending 1 ETH
+            value: web3_ganache.utils.toWei("1", "ether") // Sending 1 ETH
         });        console.log("DEX tokens bought successfully:", buyResult);
         return buyResult;
     } catch (error) {

@@ -69,6 +69,7 @@ contract DecentralizedFinance is ERC20 {
         uint256 dexAmount = msg.value * dexSwapRate;
         require(balanceOf(address(this)) >= dexAmount, "Insufficient DEX tokens in contract");
         _transfer(address(this), msg.sender, dexAmount);
+        return dexAmount;
     }
 
     function sellDex(uint256 dexAmount) external {
