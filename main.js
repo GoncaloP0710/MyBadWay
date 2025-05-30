@@ -2,7 +2,7 @@
 const web3_ganache = new Web3(new Web3.providers.HttpProvider('http://127.0.0.1:8545'));
 
 // the part is related to the DecentralizedFinance smart contract
-const defi_contractAddress = "0x41064F3eea237e09fD7E4d77e47733e08bc09906";
+const defi_contractAddress = "0x7ccE8C544fe6E646CfCe5DD0c75673eCF0F90A97";
 import { defi_abi } from "./abi_decentralized_finance.js";
 const defi_contract = new web3_ganache.eth.Contract(defi_abi, defi_contractAddress);
 
@@ -129,7 +129,7 @@ async function loan(dexAmount, deadlineMinutes) {
         console.log("Requesting loan for account:", account, "with amount:", dexAmountWei, "and deadline:", deadline);
         const loanResult = await defi_contract.methods.loan(dexAmountWei, deadline).send({
             from: account,
-            gas: 30000000, // Ajuste o limite de gás conforme necessário
+            gas: 300000, // Ajuste o limite de gás conforme necessário
         });
         console.log("Loan requested successfully:", loanResult);
         return loanResult;

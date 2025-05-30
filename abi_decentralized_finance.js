@@ -140,25 +140,6 @@ export const defi_abi = [
 		"anonymous": false,
 		"inputs": [
 			{
-				"indexed": false,
-				"internalType": "string",
-				"name": "message",
-				"type": "string"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "value",
-				"type": "uint256"
-			}
-		],
-		"name": "Debug",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
 				"indexed": true,
 				"internalType": "address",
 				"name": "from",
@@ -371,7 +352,13 @@ export const defi_abi = [
 			}
 		],
 		"name": "loan",
-		"outputs": [],
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
 		"stateMutability": "nonpayable",
 		"type": "function"
 	},
@@ -406,21 +393,6 @@ export const defi_abi = [
 			{
 				"internalType": "uint256",
 				"name": "amount",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "periodicity",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "interestRate",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "termination",
 				"type": "uint256"
 			},
 			{

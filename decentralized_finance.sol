@@ -9,9 +9,6 @@ contract DecentralizedFinance is ERC20 {
     struct Loan {
         uint deadline;
         uint256 amount;
-        uint periodicity;
-        uint256 interestRate;
-        uint256 termination;
         address lender;
         address borrower;
         bool isBasedNFT;
@@ -78,27 +75,22 @@ contract DecentralizedFinance is ERC20 {
         payable(msg.sender).transfer(ethAmount);
     }
 
-    function loan(uint256 dexAmount, uint256 deadline) external {
+    function loan(uint256 dexAmount, uint256 deadline) external returns (uint256){
         require(dexAmount > 0, "DEX amount must be greater than 0");
         require(balanceOf(msg.sender) >= dexAmount, "Insufficient DEX balance");
         require(deadline > block.timestamp, "Deadline must be in the future");
         require(deadline <= block.timestamp + maxLoanDuration, "Deadline exceeds max loan duration");
 
-        uint256 amount = (dexAmount * dexSwapRate) / 1e18;
-        require(address(this).balance >= amount, "Insufficient ETH in contract");
+        uint256 ethAmount = dexAmount / dexSwapRate;
+        require(address(this).balance >= ethAmount, "Insufficient ETH in contract");
 
         _transfer(msg.sender, address(this), dexAmount);
-        uint256 ethAmount = dexAmount / dexSwapRate;
-        payable(msg.sender).transfer(ethAmount);
-
+        
         uint256 loanId = uint256(loanCount);
 
         loans[loanId] = Loan({
             deadline: deadline,
             amount: ethAmount,
-            periodicity: periodicity,
-            interestRate: interest, 
-            termination: termination, 
             lender: address(this),
             borrower: msg.sender,
             isBasedNFT: false,
@@ -106,10 +98,13 @@ contract DecentralizedFinance is ERC20 {
             nftId: loanCount 
         });
 
+        payable(msg.sender).transfer(ethAmount);
+
         loanCount++;
 
         emit loanCreated(msg.sender, ethAmount, deadline);
         dex_lock_in += dexAmount;
+        return loanId;
     }
 
     function makePayment(uint256 loanId) external payable {
