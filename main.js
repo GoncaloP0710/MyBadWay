@@ -155,8 +155,8 @@ async function makePayment(loan, payament_amount) {
     }
 }
 
-async function returnLoan() {
-    // TODO: implement this
+async function terminateLoan() {
+    
 }
 
 async function getEthTotalBalance() {
@@ -250,6 +250,7 @@ window.listenToLoanCreation = listenToLoanCreation;
 window.getAvailableNfts = getAvailableNfts;
 window.getDexBalance = getDexBalance;
 window.getEthBalance = getEthBalance;
+window.terminateLoan = terminateLoan;
 // windows.getTotalBorrowedAndNotPaidBackEth = getTotalBorrowedAndNotPaidBackEth;
 // windows.checkLoanStatus = checkLoanStatus;
 // windows.getAllTokenURIs = getAllTokenURIs;
@@ -294,4 +295,5 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("getDexBalanceBtn").onclick = getDexBalance;
     document.getElementById("getEthBalanceBtn").onclick = getEthBalance;
     document.getElementById("getDexUserBalanceBtn").onclick = getUserDexBalance;
+    document.getElementById("terminateLoanBtn").onclick = terminateLoan;
 });

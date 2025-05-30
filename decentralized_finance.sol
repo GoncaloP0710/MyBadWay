@@ -52,6 +52,8 @@ contract DecentralizedFinance is ERC20 {
         interest = _interest;
         termination = _termination;
 
+        // TODO: ADICIONAR BALANCE COM ETH
+
         maxLoanDuration = 30 days;
         dexSwapRate = 1000;
         loanCount = 0;
@@ -95,7 +97,7 @@ contract DecentralizedFinance is ERC20 {
             borrower: msg.sender,
             isBasedNFT: false,
             nftContract: IERC721(address(0)), 
-            nftId: loanCount 
+            nftId: 0 
         });
 
         payable(msg.sender).transfer(ethAmount);
@@ -151,25 +153,23 @@ contract DecentralizedFinance is ERC20 {
         }
     }
 
-    function returnLoan(uint256 loanId) external payable { //TODO: Correção do enunciado
+    function terminateLoan(uint256 loanId) external payable { 
         Loan storage loan = loans[loanId];
         require(loan.borrower == msg.sender, "Not the borrower");
         require(!loan.isBasedNFT, "NFT-based loans must use a different function");
-        require(loan.termination == 0, "Loan already terminated");
-        require(msg.value >= uint256(loan.amount), "Insufficient repayment amount");
 
-        // TODO: FALTA A FEE
+        uint256 fee = (uint256(loan.amount) * termination) / 100;
+        require(msg.value >= uint256(loan.amount) + fee, "Insufficient repayment amount including fee");
 
-        uint256 refund = uint256(loan.amount); // TOOD: nao sei se é preciso adicionar fee
-
-        loan.termination = block.timestamp;
+        uint256 refund = msg.value - (uint256(loan.amount) + fee); 
+        require(refund >= 0, "Refund cannot be negative");
 
         _transfer(address(this), msg.sender, refund * dexSwapRate);
-        
+
     }
 
     function getBalance() public view returns (uint256) {
-        return address(this).balance;
+        return address(this).balance; //TODO: MUDOU O ENUNCIADO, AGORA PERDE ETH EM WEI
     }
 
     function getDexBalance() public view returns (uint256) {
