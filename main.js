@@ -2,7 +2,7 @@
 const web3_ganache = new Web3(new Web3.providers.HttpProvider('http://127.0.0.1:8545'));
 
 // the part is related to the DecentralizedFinance smart contract
-const defi_contractAddress = "0x53B35122b390FAF861dbA8feD65c1bac5F9206D0";
+const defi_contractAddress = "0x41064F3eea237e09fD7E4d77e47733e08bc09906";
 import { defi_abi } from "./abi_decentralized_finance.js";
 const defi_contract = new web3_ganache.eth.Contract(defi_abi, defi_contractAddress);
 
@@ -49,13 +49,14 @@ async function buyDex(ethAmount) {
 }
 
 async function sellDex(dexAmount) {
+    const dexAmountWei = web3_ganache.utils.toWei(dexAmount.toString(), "ether");
     const accounts = await window.ethereum.request({
         method: "eth_requestAccounts",
     });
     const account = accounts[0];
     try {
         console.log("Selling DEX tokens for account:", account);
-        const sellResult = await defi_contract.methods.sellDex(dexAmount).send({ 
+        const sellResult = await defi_contract.methods.sellDex(dexAmountWei).send({ 
             from: account, 
         });
         console.log("DEX tokens sold successfully:", sellResult);
@@ -101,15 +102,34 @@ async function listenToLoanCreation() {
     });
 }
 
-async function loan(dexAmount, deadline) {
+async function loan(dexAmount, deadlineMinutes) {
     const accounts = await window.ethereum.request({
         method: "eth_requestAccounts",
     });
     const account = accounts[0];
+
+    // Converte o valor de DEX para wei (18 casas decimais)
+    const dexAmountWei = web3_ganache.utils.toWei(dexAmount.toString(), "ether");
+
+    // Calcula o deadline como timestamp atual + minutos informados
+    const now = Math.floor(Date.now() / 1000);
+    const deadline = now + (parseInt(deadlineMinutes) * 60);
+
+    if (isNaN(dexAmountWei) || BigInt(dexAmountWei) <= 0n) {
+        console.error("Invalid DEX amount:", dexAmountWei);
+        throw new Error("Invalid DEX amount");
+    }
+
+    if (isNaN(deadline) || deadline <= now) {
+        console.error("Invalid deadline:", deadline);
+        throw new Error("Invalid deadline");
+    }
+
     try {
-        console.log("Requesting loan for account:", account, "with amount:", dexAmount, "and deadline:", deadline);
-        const loanResult = await defi_contract.methods.loan(dexAmount, deadline).send({ 
-            from: account 
+        console.log("Requesting loan for account:", account, "with amount:", dexAmountWei, "and deadline:", deadline);
+        const loanResult = await defi_contract.methods.loan(dexAmountWei, deadline).send({
+            from: account,
+            gas: 30000000, // Ajuste o limite de gás conforme necessário
         });
         console.log("Loan requested successfully:", loanResult);
         return loanResult;

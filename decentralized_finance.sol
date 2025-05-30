@@ -37,10 +37,10 @@ contract DecentralizedFinance is ERC20 {
     mapping(uint256 => Loan) public loans;
 
     // --------------------- Events ---------------------
-    event buyDex(address indexed buyer, uint256 amount);
-    event sellDex(address indexed seller, uint256 amount);
+    // event buyDex(address indexed buyer, uint256 amount);
+    // event sellDex(address indexed seller, uint256 amount);
     event loanCreated(address indexed borrower, uint256 amount, uint256 deadline);
-    event returnLoan(address indexed borrower, uint256 amount, uint256 loanId);
+    // event returnLoan(address indexed borrower, uint256 amount, uint256 loanId);
 
     constructor(uint256 _rate, uint256 _periodicity, uint256 _interest, uint256 _termination) ERC20("DEX", "DEX") {
         require(_rate > 0, "Rate must be greater than 0");
@@ -65,45 +65,48 @@ contract DecentralizedFinance is ERC20 {
         
         uint256 dexAmount = msg.value * dexSwapRate;
         require(balanceOf(address(this)) >= dexAmount, "Insufficient DEX tokens in contract");
+        
         _transfer(address(this), msg.sender, dexAmount);
-        return dexAmount;
     }
 
     function sellDex(uint256 dexAmount) external {
         require(balanceOf(msg.sender) >= dexAmount, "Insufficient DEX balance");
         require(address(this).balance >= dexAmount / dexSwapRate, "Insufficient ETH balance in contract"); //TODO: SUS VERIRICR DEPOIS 
         
-        uint256 ethAmount = dexAmount / dexSwapRate;
+        uint256 ethAmount = (dexAmount / dexSwapRate); // Convert DEX amount to ETH amount based on swap rate
         _transfer(msg.sender, address(this), dexAmount);
         payable(msg.sender).transfer(ethAmount);
     }
 
     function loan(uint256 dexAmount, uint256 deadline) external {
         require(dexAmount > 0, "DEX amount must be greater than 0");
-        // require(deadline > block.timestamp, "Deadline must be in the future");
-        require(deadline <= maxLoanDuration, "Deadline exceeds max loan duration");
         require(balanceOf(msg.sender) >= dexAmount, "Insufficient DEX balance");
-        require(address(this).balance >= dexAmount / dexSwapRate, "Insufficient ETH in contract");
+        require(deadline > block.timestamp, "Deadline must be in the future");
+        require(deadline <= block.timestamp + maxLoanDuration, "Deadline exceeds max loan duration");
+
+        uint256 amount = (dexAmount * dexSwapRate) / 1e18;
+        require(address(this).balance >= amount, "Insufficient ETH in contract");
 
         _transfer(msg.sender, address(this), dexAmount);
         uint256 ethAmount = dexAmount / dexSwapRate;
         payable(msg.sender).transfer(ethAmount);
 
         uint256 loanId = uint256(loanCount);
-        loanCount++;
 
         loans[loanId] = Loan({
             deadline: deadline,
             amount: ethAmount,
-            periodicity: 5, // TODO: IDK esses valores
-            interestRate: 12, 
-            termination: 10,
+            periodicity: periodicity,
+            interestRate: interest, 
+            termination: termination, 
             lender: address(this),
             borrower: msg.sender,
             isBasedNFT: false,
-            nftContract: IERC721(address(0)), // Not applicable for DEX loans
-            nftId: loanCount // TODO: SUS
+            nftContract: IERC721(address(0)), 
+            nftId: loanCount 
         });
+
+        loanCount++;
 
         emit loanCreated(msg.sender, ethAmount, deadline);
         dex_lock_in += dexAmount;

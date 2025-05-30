@@ -140,6 +140,25 @@ export const defi_abi = [
 		"anonymous": false,
 		"inputs": [
 			{
+				"indexed": false,
+				"internalType": "string",
+				"name": "message",
+				"type": "string"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "value",
+				"type": "uint256"
+			}
+		],
+		"name": "Debug",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
 				"indexed": true,
 				"internalType": "address",
 				"name": "from",
@@ -347,7 +366,7 @@ export const defi_abi = [
 			},
 			{
 				"internalType": "uint256",
-				"name": "_deadline",
+				"name": "deadline",
 				"type": "uint256"
 			}
 		],
@@ -387,6 +406,46 @@ export const defi_abi = [
 			{
 				"internalType": "uint256",
 				"name": "amount",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "periodicity",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "interestRate",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "termination",
+				"type": "uint256"
+			},
+			{
+				"internalType": "address",
+				"name": "lender",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "borrower",
+				"type": "address"
+			},
+			{
+				"internalType": "bool",
+				"name": "isBasedNFT",
+				"type": "bool"
+			},
+			{
+				"internalType": "contract IERC721",
+				"name": "nftContract",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "nftId",
 				"type": "uint256"
 			}
 		],
