@@ -11,44 +11,63 @@
   <header>
     My Bad Way
   </header>
-  <main>
-    <section class="section">
-      <h2>DEX Operations</h2>
-      <button class="btn" id="buyDexBtn">Buy DEX</button>
-      <button class="btn" id="sellDexBtn">Sell DEX</button>
-      <button class="btn" id="getDexBalanceBtn">Ver saldo DEX do contrato</button>
-      <span id="dexBalanceOutput"></span>
-      <br>
-      <button class="btn" id="getEthBalanceBtn">Ver saldo ETH do contrato</button>
-      <span id="ethBalanceOutput"></span>
-      <button class="btn" id="getDexUserBalanceBtn">Ver meu saldo DEX</button>
-      <span id="dexUserBalanceOutput"></span>
-    </section>
-
-    <section class="section">
-      <h2>Loans</h2>
-      <button class="btn" id="requestLoanBtn">Request Loan</button>
-      <button class="btn" id="terminateLoanBtn">Terminate Loan</button>
+  <main style="display: flex; flex-direction: row; gap: 20px;">
+    <div style="flex: 1;">
+      <!-- Existing content -->
+      <section class="section">
+        <h2>DEX Operations</h2>
+        <button class="btn" id="buyDexBtn">Buy DEX</button>
+        <button class="btn" id="sellDexBtn">Sell DEX</button>
+        <button class="btn" id="getDexBalanceBtn">Ver saldo DEX do contrato</button>
+        <span id="dexBalanceOutput"></span>
+        <br>
+        <button class="btn" id="getEthBalanceBtn">Ver saldo ETH do contrato</button>
+        <span id="ethBalanceOutput"></span>
+        <button class="btn" id="getDexUserBalanceBtn">Ver meu saldo DEX</button>
+        <span id="dexUserBalanceOutput"></span>
+      </section>
+  
+      <section class="section">
+        <h2>Loans</h2>
+        <button class="btn" id="requestLoanBtn">Request Loan</button>
+        <button class="btn" id="terminateLoanBtn">Terminate Loan</button>
+        <div class="input-group">
+          <label for="loanDropdown">Check Loan Status:</label>
+          <select id="loanDropdown" class="dropdown"></select>
+          <button class="btn" id="checkLoanBtn">Check Loan Status</button>
+        </div>
+      </section>
+  
       <div class="input-group">
-        <label for="loanDropdown">Check Loan Status:</label>
-        <select id="loanDropdown" class="dropdown"></select>
-        <button class="btn" id="checkLoanBtn">Check Loan Status</button>
+        <label for="paymentLoanDropdown">Select Loan:</label>
+        <select id="paymentLoanDropdown" class="dropdown"></select>
+        <input type="number" id="paymentAmountInput" placeholder="Enter payment amount (ETH)" />
+        <button class="btn" id="makePaymentBtn">Make Payment</button>
       </div>
-    </section>
-
-    <div class="input-group">
-      <label for="paymentLoanDropdown">Select Loan:</label>
-      <select id="paymentLoanDropdown" class="dropdown"></select>
-      <input type="number" id="paymentAmountInput" placeholder="Enter payment amount (ETH)" />
-      <button class="btn" id="makePaymentBtn">Make Payment</button>
+  
+      <section class="section">
+        <h2>NFT Loans</h2>
+        <button class="btn" id="requestNftLoanBtn">Request Loan with NFT</button>
+        <button class="btn" id="cancelNftLoanBtn">Cancel NFT Loan Request</button>
+        <button class="btn" id="repayNftLoanBtn">Repay NFT Loan</button>
+      </section>
+  
+      <section class="section">
+        <h2>NFT Operations</h2>
+        <button class="btn" id="mintNftBtn">Mint NFT</button>
+      </section>
     </div>
-
-    <section class="section">
-      <h2>NFT Loans</h2>
-      <button class="btn" id="requestNftLoanBtn">Request Loan with NFT</button>
-      <button class="btn" id="cancelNftLoanBtn">Cancel NFT Loan Request</button>
-      <button class="btn" id="repayNftLoanBtn">Repay NFT Loan</button>
-    </section>
+  
+    <!-- Separate boxes for dictionaries -->
+    <div style="flex: 1; border: 1px solid #ccc; padding: 10px; border-radius: 5px; margin-right: 10px;">
+      <h2>Loan Dictionary</h2>
+      <ul id="loanDictList"></ul>
+    </div>
+  
+    <div style="flex: 1; border: 1px solid #ccc; padding: 10px; border-radius: 5px;">
+      <h2>NFT Dictionary</h2>
+      <ul id="nftDictList"></ul>
+    </div>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
   <script src="main.js" type="module"></script>

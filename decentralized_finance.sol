@@ -63,8 +63,7 @@ contract DecentralizedFinance is ERC20 {
 
     function sellDex(uint256 dexAmount) external {
         require(balanceOf(msg.sender) >= dexAmount, "Insufficient DEX balance");
-        require(address(this).balance >= dexAmount / dexSwapRate, "Insufficient ETH balance in contract"); //TODO: SUS VERIRICR DEPOIS 
-        
+        require(address(this).balance >= dexAmount / dexSwapRate, "Insufficient ETH balance in contract");
         uint256 ethAmount = (dexAmount / dexSwapRate); // Convert DEX amount to ETH amount based on swap rate
         _transfer(msg.sender, address(this), dexAmount);
         payable(msg.sender).transfer(ethAmount);
@@ -77,8 +76,7 @@ contract DecentralizedFinance is ERC20 {
         require(deadline <= block.timestamp + maxLoanDuration, "Deadline exceeds max loan duration");
         uint256 ethAmount = dexAmount / dexSwapRate;
         require(address(this).balance >= ethAmount, "Insufficient ETH in contract");
-
-        _transfer(msg.sender, address(this), dexAmount);
+        _transfer(msg.sender, address(this), dexAmount); // Transfer DEX tokens from borrower to contract
         uint256 loanId = uint256(loanCount);
 
         loans[loanId] = Loan({
@@ -93,8 +91,7 @@ contract DecentralizedFinance is ERC20 {
 
         numberOfPayments[loanId] = 0; // Initialize the number of payments made for this loan
         loanStartTime[loanId] = block.timestamp; // Store the start time of the loan
-        
-        payable(msg.sender).transfer(ethAmount);
+        payable(msg.sender).transfer(ethAmount); // Transfer ETH to the borrower
         loanCount++;
         emit loanCreated(loanId);
         dex_lock_in += dexAmount;
@@ -111,7 +108,7 @@ contract DecentralizedFinance is ERC20 {
             }
             return; 
         }
-        
+
         Loan storage loanPayment = loans[loanId];
         bool checked = checkLoan(loanId);
         if (checked) {
@@ -197,69 +194,90 @@ contract DecentralizedFinance is ERC20 {
         }
     }
 
+    function setDexSwapRate(uint256 newRate) external {
+        require(msg.sender == owner, "Only owner can set the DEX swap rate");
+        require(newRate > 0, "New rate must be greater than 0");
+        dexSwapRate = newRate;
+    }
 
     function getBalance() public view returns (uint256) {
-        return address(this).balance; //TODO: MUDOU O ENUNCIADO, AGORA PERDE ETH EM WEI
+        return address(this).balance;
     }
 
     function getDexBalance() public view returns (uint256) {
         return balanceOf(address(this));
     }
 
-    // function makeLoanRequestByNft(IERC721 nftContract, uint256 nftId, uint256 loanAmount, uint256 deadline) external {
-    //     require(nftContract.ownerOf(nftId) == msg.sender, "You do not own this NFT");
-    //     require(deadline > block.timestamp, "Deadline must be in the future");
-    //     require(deadline <= block.timestamp + maxLoanDuration, "Deadline exceeds max loan duration");
-    //     require(loanAmount > 0, "Loan amount must be greater than 0"); // TODO: Não sei se é preciso
+    function makeLoanRequestByNft(IERC721 nftContract, uint256 nftId, uint256 loanAmount, uint256 deadline) external {
+        require(loanAmount > 0, "Loan amount must be greater than 0");
+        require(nftContract.ownerOf(nftId) == msg.sender, "You do not own this NFT");
+        require(deadline > block.timestamp, "Deadline must be in the future");
+        require(deadline <= block.timestamp + maxLoanDuration, "Deadline exceeds max loan duration");
 
-    //     nftContract.transferFrom(msg.sender, address(this), nftId);
+        nftContract.transferFrom(msg.sender, address(this), nftId);
 
-    //     uint256 loanId = uint256(keccak256(abi.encodePacked(msg.sender, block.timestamp, loanAmount)));
+        uint256 loanId = loanCount;
 
-    //     loanCount++;
+        loans[loanId] = Loan({
+            deadline: deadline,
+            amount: loanAmount,
+            lender: address(0),
+            borrower: msg.sender,
+            isBasedNFT: true,
+            nftContract: nftContract, 
+            nftId: nftId 
+        });
 
-    //     loans[loanId] = Loan({
-    //         deadline: deadline,
-    //         amount: int256(loanAmount),
-    //         periodicity: 0, // TODO: IDK esses valores
-    //         interestRate: 0,
-    //         termination: 0,
-    //         lender: address(this),
-    //         borrower: msg.sender,
-    //         isBasedNFT: true,
-    //         nftContract: nftContract,
-    //         nftId: nftId
-    //     });
-
-    //     emit loanCreated(msg.sender, loanAmount, deadline);
-    // }
-
-    // function cancelLoanRequestByNft(IERC721 nftContract, uint256 nftId) external {
-    //     require(nftContract.ownerOf(nftId) == msg.sender, "You do not own this NFT");
+        loanStartTime[loanId] = block.timestamp; // Store the start time of the loan
+        numberOfPayments[loanId] = 0; // Initialize the number of payments made for this loan
+        loanCount++;
         
-    //     uint256 loanId = uint256(keccak256(abi.encodePacked(msg.sender, block.timestamp, nftId)));
+    }
 
-    //     Loan storage loan = loans[loanId];
-    //     require(loan.termination == 0, "Loan already terminated or does not exist");
+    function cancelLoanRequestByNft(IERC721 nftContract, uint256 nftId) external {
+        uint256 foundLoanId = _findNftLoanId(nftContract, nftId, msg.sender, true);
+        require(foundLoanId != type(uint256).max, "Loan request not found or already funded");
 
-    //     // Transfer NFT back to the owner
-    //     nftContract.transferFrom(address(this), msg.sender, nftId); // TODO: Como pagar de volta o loan? idk
+        Loan storage loanCancel = loans[foundLoanId];
+        loanCancel.amount = 0; 
 
-    //     loan.termination = block.timestamp; // Mark as cancelled
-    // }
+        nftContract.transferFrom(address(this), msg.sender, nftId);
+    }
 
-    // function loanByNft(IERC721 nftContract, uint256 nftId) external {
-    //     uint256 loanId = nftToLoanId[address(nftContract)][nftId];
-    //     Loan storage loan = loans[loanId];
-    //     require(loan.isBasedNFT, "Loan is not NFT-based");
-    //     require(loan.lender == address(0), "Loan already has a lender");
-    //     require(loan.termination == 0, "Loan already terminated");
+    function loanByNft(IERC721 nftContract, uint256 nftId) external {
+        uint256 foundLoanId = _findNftLoanId(nftContract, nftId, msg.sender, true);
+        require(foundLoanId != type(uint256).max, "Loan request not found or already funded");
 
-    //     uint256 dexToLock = uint256(loan.amount) * dexSwapRate;
-    //     require(balanceOf(msg.sender) >= dexToLock, "Insufficient DEX balance to lend");
-    //     _transfer(msg.sender, address(this), dexToLock);
-    //     loan.lender = msg.sender;
+        Loan storage loanNft = loans[foundLoanId];
+        require(msg.sender != loanNft.borrower, "Borrower cannot be lender");
+        uint256 dexToLock = loanNft.amount * dexSwapRate;
+        require(balanceOf(msg.sender) >= dexToLock, "Insufficient DEX balance to lend");
 
-    //     emit loanCreated(loan.borrower, uint256(loan.amount), loan.deadline);
-    // }
+        // Transfere DEX do lender para o contrato
+        _transfer(msg.sender, address(this), dexToLock);
+        loanNft.lender = msg.sender;
+        dex_lock_in += dexToLock;
+
+        // Envia ETH para o tomador do empréstimo
+        payable(loanNft.borrower).transfer(loanNft.amount);
+
+        emit loanCreated(foundLoanId);
+    }
+
+    function _findNftLoanId(IERC721 nftContract, uint256 nftId, address borrower, bool onlyUnfunded) internal view returns (uint256) {
+        for (uint256 i = 0; i < loanCount; i++) {
+            Loan storage loanToFind = loans[i];
+            if (
+                loanToFind.isBasedNFT &&
+                address(loanToFind.nftContract) == address(nftContract) &&
+                loanToFind.nftId == nftId &&
+                loanToFind.borrower == borrower &&
+                (!onlyUnfunded || loanToFind.lender == address(0)) &&
+                loanToFind.amount > 0
+            ) {
+                return i;
+            }
+        }
+        return type(uint256).max;
+    }
 }

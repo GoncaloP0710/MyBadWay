@@ -6,11 +6,12 @@ import { defi_abi } from "./abi_decentralized_finance.js";
 const defi_contract = new web3_ganache.eth.Contract(defi_abi, defi_contractAddress);
 
 // the part is related to the the SimpleNFT smart contract
-//const nft_contractAddress = " contract-address ";
-//import { nft_abi } from "./abi_nft.js";
-//const nft_contract = new web3.eth.Contract(nft_abi, nft_contractAddress);
+const nft_contractAddress = "0x42151bb7d94A5E2Fe1bf8000a87DFd4ABfccF629";
+import { nft_abi } from "./abi_nft.js";
+const nft_contract = new web3_ganache.eth.Contract(nft_abi, nft_contractAddress);
 
 const loan_dict = {};
+const nft_dict = {};
 
 web3_ganache.currentProvider.on('connect', () => {
     console.log("WebSocket connected");
@@ -89,6 +90,7 @@ async function listenToLoanCreation() {
                 loan_dict[loanId] = loan;
                 console.log("New loan created:", loanId, loan);
                 populatePaymentDropdown();
+                updateLoanDictList();
             } catch (error) {
                 console.error("Error fetching loan details for loanId:", loanId, error);
             }
@@ -293,6 +295,52 @@ async function getUserDexBalance() {
     }
 }
 
+async function listenToNftMinting() {
+    nft_contract.events.NftMinted()
+        .on('data', (event) => {
+            console.log("NFT Minted event received:", event.returnValues);
+
+            const { nftContract, tokenId } = event.returnValues;
+            nft_dict[tokenId] = { nftContract };
+            updateNftDictList();
+
+            console.log("New NFT added to nft_dict:", tokenId, nft_dict[tokenId]);
+        })
+        .on('error', (error) => {
+            console.error("Error listening to NftMinted event:", error);
+        });
+}
+
+async function mintNFT() {
+    const accounts = await window.ethereum.request({
+        method: "eth_requestAccounts",
+    });
+    const account = accounts[0];
+
+    const tokenURI = prompt("Enter the token URI for the NFT:");
+    if (!tokenURI) {
+        alert("Token URI is required to mint an NFT.");
+        return;
+    }
+
+    const mintPrice = "1000"; 
+    try {
+        console.log("Minting NFT for account:", account, "with token URI:", tokenURI);
+        const mintResult = await nft_contract.methods.mint(tokenURI).send({
+            from: account,
+            value: web3_ganache.utils.toWei(mintPrice, "wei"), // Ensure the mint price is sent
+            gas: 3000000, // Adjust gas limit as needed
+        });
+        console.log("NFT minted successfully:", mintResult);
+        alert("NFT minted successfully!");
+        return mintResult;
+    } catch (error) {
+        console.error("Error minting NFT:", error);
+        alert("Error minting NFT. Check the console for details.");
+        throw error;
+    }
+}
+
 const populatePaymentDropdown = () => {
     const dropdown = document.getElementById("paymentLoanDropdown");
     dropdown.innerHTML = ""; // Clear existing options
@@ -303,6 +351,26 @@ const populatePaymentDropdown = () => {
         dropdown.appendChild(option);
     }
 };
+
+function updateLoanDictList() {
+    const loanDictList = document.getElementById("loanDictList");
+    loanDictList.innerHTML = ""; // Clear the list
+    for (const key in loan_dict) {
+        const listItem = document.createElement("li");
+        listItem.textContent = `${key}: ${JSON.stringify(loan_dict[key])}`;
+        loanDictList.appendChild(listItem);
+    }
+}
+
+function updateNftDictList() {
+    const nftDictList = document.getElementById("nftDictList");
+    nftDictList.innerHTML = ""; // Clear the list
+    for (const key in nft_dict) {
+        const listItem = document.createElement("li");
+        listItem.textContent = `${key}: ${JSON.stringify(nft_dict[key])}`;
+        nftDictList.appendChild(listItem);
+    }
+}
 
 window.connectMetaMask = connectMetaMask;
 window.buyDex = buyDex;
@@ -387,7 +455,11 @@ document.addEventListener("DOMContentLoaded", () => {
             console.error(error);
         }
     };
+    document.getElementById("mintNftBtn").onclick = mintNFT;
 
+    updateLoanDictList();
+    updateNftDictList();
     populatePaymentDropdown();
     listenToLoanCreation();
+    listenToNftMinting();
 });
