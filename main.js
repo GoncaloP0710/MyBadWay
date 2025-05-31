@@ -1,8 +1,7 @@
 // const web3 = new Web3(window.ethereum);
-const web3_ganache = new Web3(new Web3.providers.HttpProvider('http://127.0.0.1:8545'));
-
+const web3_ganache = new Web3(new Web3.providers.WebsocketProvider('ws://127.0.0.1:8545'));
 // the part is related to the DecentralizedFinance smart contract
-const defi_contractAddress = "0x9B2c633425C8CC66f6e5BdF0ACC01271dA07685B";
+const defi_contractAddress = "0x8D68c43911fd251553d6576D13136Ee4C6aA9D1b";
 import { defi_abi } from "./abi_decentralized_finance.js";
 const defi_contract = new web3_ganache.eth.Contract(defi_abi, defi_contractAddress);
 
@@ -12,6 +11,13 @@ const defi_contract = new web3_ganache.eth.Contract(defi_abi, defi_contractAddre
 //const nft_contract = new web3.eth.Contract(nft_abi, nft_contractAddress);
 
 const loan_dict = {};
+
+web3_ganache.currentProvider.on('connect', () => {
+    console.log("WebSocket connected");
+});
+web3_ganache.currentProvider.on('error', (error) => {
+    console.error("WebSocket error:", error);
+});
 
 async function connectMetaMask() {
     if (window.ethereum) {
@@ -89,17 +95,19 @@ async function checkLoanStatus(loan) {
 }  
 
 async function listenToLoanCreation() {
-    defi_contract.events.loanCreated({}, (error, event) => {
-        if (!error) {
+    defi_contract.events.loanCreated()
+        .on('data', (event) => {
+            console.log("Loan created event received:", event.returnValues);
+            
             const { borrower, amount, deadline, loanId } = event.returnValues;
-            // Salve o loanId usando uma chave única (ex: borrower + amount + deadline)
             const key = `${borrower}_${amount}_${deadline}`;
             loan_dict[key] = loanId;
-            console.log("Novo empréstimo criado:", loanId);
-        } else {
-            console.error("Erro ao escutar loanCreated:", error);
-        }
-    });
+            console.log("New loan created:", loanId);
+            populatePaymentDropdown();
+        })
+        .on('error', (error) => {
+            console.error("Error listening to loanCreated event:", error);
+        });
 }
 
 async function loan(dexAmount, deadlineMinutes) {
@@ -131,6 +139,11 @@ async function loan(dexAmount, deadlineMinutes) {
             from: account,
             gas: 300000, // Ajuste o limite de gás conforme necessário
         });
+
+        // Access the loanId from the transaction receipt
+        const loanId = loanResult.events.loanCreated.returnValues.loanId;
+        console.log("Loan requested successfully. Loan ID:", loanId);
+
         console.log("Loan requested successfully:", loanResult);
         return loanResult;
     } catch (error) {
@@ -139,16 +152,25 @@ async function loan(dexAmount, deadlineMinutes) {
     }
 }
 
-async function makePayment(loan, payament_amount) {
+async function makePayment(loanKey, paymentAmount) {
     const accounts = await window.ethereum.request({
         method: "eth_requestAccounts",
     });
     const account = accounts[0];
+
+    // Retrieve the loanId using the key
+    const loanId = loan_dict[loanKey];
+    if (!loanId) {
+        alert("Invalid loan key selected.");
+        return;
+    }
+
     try {
-        console.log("Making payment for loan:", loan, "with amount:", payament_amount);
-        const paymentResult = await defi_contract.methods.makePayment(loan_dict[loan], payament_amount).send({ 
-            from: account, 
-            value: web3_ganache.utils.toWei(payament_amount.toString(), "ether") 
+        console.log("Making payment for loan ID:", loanId, "with amount:", paymentAmount);
+        const paymentResult = await defi_contract.methods.makePayment(loanId).send({
+            from: account,
+            value: web3_ganache.utils.toWei(paymentAmount.toString(), "ether"),
+            gas: 3000000 // Ajuste o limite de gás conforme necessário
         });
         console.log("Payment made successfully:", paymentResult);
         return paymentResult;
@@ -177,7 +199,7 @@ async function terminateLoan(loanId) {
         const terminateResult = await defi_contract.methods.terminateLoan(loanId).send({
             from: account,
             value: valueWei,
-            gas: 300000
+            gas: 3000000
         });
         console.log("Loan terminated successfully:", terminateResult);
         return terminateResult;
@@ -263,6 +285,17 @@ async function getUserDexBalance() {
     }
 }
 
+const populatePaymentDropdown = () => {
+    const dropdown = document.getElementById("paymentLoanDropdown");
+    dropdown.innerHTML = ""; // Clear existing options
+    for (const key in loan_dict) {
+        const option = document.createElement("option");
+        option.value = key; // Use the key as the value
+        option.textContent = key; // Display the key (borrower_amount_deadline)
+        dropdown.appendChild(option);
+    }
+};
+
 window.connectMetaMask = connectMetaMask;
 window.buyDex = buyDex;
 window.sellDex = sellDex;
@@ -330,17 +363,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         await terminateLoan(loanId);
     };
-
-    const populatePaymentDropdown = () => {
-        const dropdown = document.getElementById("paymentLoanDropdown");
-        dropdown.innerHTML = ""; // Clear existing options
-        for (const key in loan_dict) {
-            const option = document.createElement("option");
-            option.value = key;
-            option.textContent = key;
-            dropdown.appendChild(option);
-        }
-    };
     
     document.getElementById("makePaymentBtn").onclick = async () => {
         const loanKey = document.getElementById("paymentLoanDropdown").value;
@@ -359,4 +381,5 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     populatePaymentDropdown();
+    listenToLoanCreation();
 });
