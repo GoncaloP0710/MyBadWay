@@ -146,7 +146,10 @@ async function makePayment(loan, payament_amount) {
     const account = accounts[0];
     try {
         console.log("Making payment for loan:", loan, "with amount:", payament_amount);
-        const paymentResult = await defi_contract.methods.makePayment(loan_dict[loan], payament_amount).send({ from: account, value: web3_ganache.utils.toWei(payament_amount.toString(), "ether") });
+        const paymentResult = await defi_contract.methods.makePayment(loan_dict[loan], payament_amount).send({ 
+            from: account, 
+            value: web3_ganache.utils.toWei(payament_amount.toString(), "ether") 
+        });
         console.log("Payment made successfully:", paymentResult);
         return paymentResult;
     } catch (error) {
@@ -327,4 +330,33 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         await terminateLoan(loanId);
     };
+
+    const populatePaymentDropdown = () => {
+        const dropdown = document.getElementById("paymentLoanDropdown");
+        dropdown.innerHTML = ""; // Clear existing options
+        for (const key in loan_dict) {
+            const option = document.createElement("option");
+            option.value = key;
+            option.textContent = key;
+            dropdown.appendChild(option);
+        }
+    };
+    
+    document.getElementById("makePaymentBtn").onclick = async () => {
+        const loanKey = document.getElementById("paymentLoanDropdown").value;
+        const paymentAmount = parseFloat(document.getElementById("paymentAmountInput").value);
+        if (!loanKey || isNaN(paymentAmount) || paymentAmount <= 0) {
+            alert("Please select a valid loan and enter a valid payment amount.");
+            return;
+        }
+        try {
+            await makePayment(loanKey, paymentAmount);
+            alert("Payment successful!");
+        } catch (error) {
+            alert("Error making payment. Check the console for details.");
+            console.error(error);
+        }
+    };
+
+    populatePaymentDropdown();
 });
