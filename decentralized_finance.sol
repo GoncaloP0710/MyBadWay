@@ -102,14 +102,14 @@ contract DecentralizedFinance is ERC20 {
     event Debug(uint256 duration, uint256 interestPayment, uint256 value, uint256 time);
 
     function makePayment(uint256 loanId) external payable {
-        if (loanCheck.amount == 0) {
+        Loan storage loanPayment = loans[loanId];
+        if (loanPayment.amount == 0) {
             if (msg.value > 0) {
                 payable(msg.sender).transfer(msg.value);
             }
             return; 
         }
 
-        Loan storage loanPayment = loans[loanId];
         bool checked = checkLoan(loanId);
         if (checked) {
             uint256 time = loanPayment.deadline - loanStartTime[loanId];
@@ -209,12 +209,12 @@ contract DecentralizedFinance is ERC20 {
     }
 
     function makeLoanRequestByNft(IERC721 nftContract, uint256 nftId, uint256 loanAmount, uint256 deadline) external {
+        IERC721 nft = IERC721(nftContract);
+
         require(loanAmount > 0, "Loan amount must be greater than 0");
-        require(nftContract.ownerOf(nftId) == msg.sender, "You do not own this NFT");
+        require(nft.ownerOf(nftId) == msg.sender, "You do not own this NFT");
         require(deadline > block.timestamp, "Deadline must be in the future");
         require(deadline <= block.timestamp + maxLoanDuration, "Deadline exceeds max loan duration");
-
-        nftContract.transferFrom(msg.sender, address(this), nftId);
 
         uint256 loanId = loanCount;
 
@@ -224,7 +224,7 @@ contract DecentralizedFinance is ERC20 {
             lender: address(0),
             borrower: msg.sender,
             isBasedNFT: true,
-            nftContract: nftContract, 
+            nftContract: nft, 
             nftId: nftId 
         });
 

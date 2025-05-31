@@ -12,7 +12,7 @@ contract SimpleNFT is ERC721URIStorage, Ownable {
     uint256 public mintPrice = 1000 wei;
     Counters.Counter public tokenIdCounter;
 
-    constructor() payable ERC721("Simple NFT", "SNFT") Ownable() {}
+    constructor() payable ERC721("Simple NFT", "SNFT") Ownable(msg.sender) {}
 
     event NftMinted(address indexed nftContract, uint256 tokenId);
 

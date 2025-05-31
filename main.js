@@ -1,12 +1,12 @@
 // const web3 = new Web3(window.ethereum);
 const web3_ganache = new Web3(new Web3.providers.WebsocketProvider('ws://127.0.0.1:8545'));
 // the part is related to the DecentralizedFinance smart contract
-const defi_contractAddress = "0x4E91C79af26D2229B3aA53e8D024B4726f1FbCFE";
+const defi_contractAddress = "0xB94EEaCA9040a561f8F67fFACB47897EDff8403c";
 import { defi_abi } from "./abi_decentralized_finance.js";
 const defi_contract = new web3_ganache.eth.Contract(defi_abi, defi_contractAddress);
 
 // the part is related to the the SimpleNFT smart contract
-const nft_contractAddress = "0x42151bb7d94A5E2Fe1bf8000a87DFd4ABfccF629";
+const nft_contractAddress = "0x6bC02423027AE426d6C1555aBc003F655226209a";
 import { nft_abi } from "./abi_nft.js";
 const nft_contract = new web3_ganache.eth.Contract(nft_abi, nft_contractAddress);
 
@@ -236,7 +236,42 @@ async function getTotalBorrowedAndNotPaidBackEth() {
 }
 
 async function makeLoanRequestByNft() {
-    // TODO: implement this
+    console.log("Making loan request by NFT...");
+    const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+    const account = accounts[0];
+
+    const nftId = document.getElementById("nftDropdown").value;
+    const loanAmount = prompt("Enter the loan amount (ETH):");
+    const deadlineMinutes = prompt("Enter the loan deadline in minutes:");
+
+    if (!nftId || !loanAmount || !deadlineMinutes || isNaN(loanAmount) || isNaN(deadlineMinutes)) {
+        alert("Invalid input. Please provide valid NFT, loan amount, and deadline.");
+        return;
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+    const deadline = now + (parseInt(deadlineMinutes) * 60);
+
+    try {
+        console.log("Requesting loan with NFT:", nftId, "Loan amount:", loanAmount, "Deadline:", deadline);
+
+        const loanAmountWei = web3_ganache.utils.toWei(loanAmount.toString(), "ether");
+        const nftContractAddress = nft_contractAddress; // Address of the NFT contract
+        console.log("NFT Contract Address:", nftContractAddress);
+
+        const result = await defi_contract.methods
+            .makeLoanRequestByNft(nftContractAddress, nftId, loanAmountWei, deadline)
+            .send({
+                from: account,
+                gas: 3000000, // Adjust gas limit as needed
+            });
+
+        console.log("Loan request with NFT successful:", result);
+        alert("Loan request with NFT submitted successfully!");
+    } catch (error) {
+        console.error("Error requesting loan with NFT:", error);
+        alert("Error requesting loan with NFT. Check the console for details.");
+    }
 }
 
 async function cancelLoanRequestByNft() {
@@ -303,7 +338,7 @@ async function listenToNftMinting() {
             const { nftContract, tokenId } = event.returnValues;
             nft_dict[tokenId] = { nftContract };
             updateNftDictList();
-
+            populateNftDropdown();
             console.log("New NFT added to nft_dict:", tokenId, nft_dict[tokenId]);
         })
         .on('error', (error) => {
@@ -369,6 +404,29 @@ function updateNftDictList() {
         const listItem = document.createElement("li");
         listItem.textContent = `${key}: ${JSON.stringify(nft_dict[key])}`;
         nftDictList.appendChild(listItem);
+    }
+}
+
+async function populateNftDropdown() {
+    const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+    const account = accounts[0];
+
+    const nftDropdown = document.getElementById("nftDropdown");
+    nftDropdown.innerHTML = ""; // Clear existing options
+
+    try {
+        const totalSupply = await nft_contract.methods.tokenIdCounter().call(); // Assuming tokenIdCounter is public
+        for (let tokenId = 1; tokenId <= totalSupply; tokenId++) {
+            const owner = await nft_contract.methods.ownerOf(tokenId).call();
+            if (owner.toLowerCase() === account.toLowerCase()) {
+                const option = document.createElement("option");
+                option.value = tokenId;
+                option.textContent = `NFT #${tokenId}`;
+                nftDropdown.appendChild(option);
+            }
+        }
+    } catch (error) {
+        console.error("Error populating NFT dropdown:", error);
     }
 }
 
@@ -462,4 +520,7 @@ document.addEventListener("DOMContentLoaded", () => {
     populatePaymentDropdown();
     listenToLoanCreation();
     listenToNftMinting();
+    populateNftDropdown(); // Populate the dropdown with NFTs
+
+    document.getElementById("requestNftLoanBtn").onclick = makeLoanRequestByNft;
 });
