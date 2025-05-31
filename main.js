@@ -2,7 +2,7 @@
 const web3_ganache = new Web3(new Web3.providers.HttpProvider('http://127.0.0.1:8545'));
 
 // the part is related to the DecentralizedFinance smart contract
-const defi_contractAddress = "0x7ccE8C544fe6E646CfCe5DD0c75673eCF0F90A97";
+const defi_contractAddress = "0x9B2c633425C8CC66f6e5BdF0ACC01271dA07685B";
 import { defi_abi } from "./abi_decentralized_finance.js";
 const defi_contract = new web3_ganache.eth.Contract(defi_abi, defi_contractAddress);
 
@@ -155,8 +155,33 @@ async function makePayment(loan, payament_amount) {
     }
 }
 
-async function terminateLoan() {
-    
+async function terminateLoan(loanId) {
+    const accounts = await window.ethereum.request({
+        method: "eth_requestAccounts",
+    });
+    const account = accounts[0];
+
+    // Peça o valor total ao usuário
+    const repayAmount = prompt("Digite o valor total (em ETH) para quitar o empréstimo (principal + taxa):");
+    if (!repayAmount || isNaN(repayAmount) || Number(repayAmount) <= 0) {
+        alert("Valor inválido.");
+        return;
+    }
+
+    try {
+        const valueWei = web3_ganache.utils.toWei(repayAmount.toString(), "ether");
+        console.log("Terminating loan with ID:", loanId, "and value:", valueWei);
+        const terminateResult = await defi_contract.methods.terminateLoan(loanId).send({
+            from: account,
+            value: valueWei,
+            gas: 300000
+        });
+        console.log("Loan terminated successfully:", terminateResult);
+        return terminateResult;
+    } catch (error) {
+        console.error("Error terminating loan:", error);
+        throw error;
+    }
 }
 
 async function getEthTotalBalance() {
@@ -239,7 +264,6 @@ window.connectMetaMask = connectMetaMask;
 window.buyDex = buyDex;
 window.sellDex = sellDex;
 window.loan = loan;
-window.returnLoan = returnLoan;
 window.getEthTotalBalance = getEthTotalBalance;
 window.getRateEthToDex = getRateEthToDex;
 window.makeLoanRequestByNft = makeLoanRequestByNft;
@@ -278,11 +302,11 @@ document.addEventListener("DOMContentLoaded", () => {
         const deadline = prompt("Deadline (timestamp)?");
         if (dexAmount && deadline) loan(dexAmount, deadline);
     };
-    document.getElementById("repayLoanBtn").onclick = () => {
-        const key = prompt("Chave do empréstimo (ex: borrower_amount_deadline)?");
-        const amount = prompt("Valor do pagamento?");
-        if (key && amount) makePayment(key, amount);
-    };
+    // document.getElementById("repayLoanBtn").onclick = () => {
+    //     const key = prompt("Chave do empréstimo (ex: borrower_amount_deadline)?");
+    //     const amount = prompt("Valor do pagamento?");
+    //     if (key && amount) makePayment(key, amount);
+    // };
     document.getElementById("checkLoanBtn").onclick = () => {
         const key = document.getElementById("loanDropdown").value;
         if (key) checkLoanStatus(key);
@@ -295,5 +319,12 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("getDexBalanceBtn").onclick = getDexBalance;
     document.getElementById("getEthBalanceBtn").onclick = getEthBalance;
     document.getElementById("getDexUserBalanceBtn").onclick = getUserDexBalance;
-    document.getElementById("terminateLoanBtn").onclick = terminateLoan;
+    document.getElementById("terminateLoanBtn").onclick = async () => {
+        const loanId = prompt("Digite o ID do empréstimo (loanId) que deseja terminar:");
+        if (!loanId || isNaN(loanId)) {
+            alert("ID do empréstimo inválido.");
+            return;
+        }
+        await terminateLoan(loanId);
+    };
 });
