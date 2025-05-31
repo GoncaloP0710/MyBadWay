@@ -23,20 +23,20 @@ contract DecentralizedFinance is ERC20 {
 
     // --------------------- Loan Parameters ---------------------
     uint public periodicity; // payment interval
-    uint public interest; // payment
+    uint public interest;
     uint public termination; // fee
 
-    uint256 public loanCount; // TODO: Criei para dar set do ID da loan, podemos retirar depois idk
-    uint256 public nftCount; // TODO: Criei para dar set do ID da loan, podemos retirar depois idk
-    uint256 public dex_lock_in = 0; // Value of DEX to lock in for loans when they are payed on its totality
+    uint256 public loanCount; 
+    uint256 public nftCount;
+    uint256 public dex_lock_in = 0; // Value of DEX to lock in for loans when they are payed on its totality and the colateral needs to be returned
     
     // --------------------- Mapping ---------------------
     mapping(uint256 => Loan) public loans; // loanId => Loan
-    mapping(uint256 => uint256) public lastPaymentTime; // loanId => timestamp
-    mapping(uint256 => uint256) public loanDexLock; // loanId => DEX locked for the loan
+    mapping(uint256 => uint256) public numberOfPayments; // loanId => number of payments made
+    mapping(uint256 => uint256) public loanStartTime; // loanId => number of payments made
 
     // --------------------- Events ---------------------
-    event loanCreated(address indexed borrower, uint256 amount, uint256 deadline, uint256 loanId);
+    event loanCreated(uint256 loanId);
 
     constructor(uint256 _rate, uint256 _periodicity, uint256 _interest, uint256 _termination) ERC20("DEX", "DEX") {
         require(_rate > 0, "Rate must be greater than 0");
@@ -47,7 +47,7 @@ contract DecentralizedFinance is ERC20 {
         _mint(address(this), 10**24);
         owner = msg.sender;   
         dexSwapRate = _rate;
-        periodicity = _periodicity; // TODO: Check if it should be days or seconds...
+        periodicity = _periodicity * 1 days; // In seconds
         interest = _interest;
         termination = _termination;
         maxLoanDuration = 30 days;
@@ -91,63 +91,86 @@ contract DecentralizedFinance is ERC20 {
             nftId: 0 
         });
 
-        loanDexLock[loanId] = dexAmount; // Lock the DEX amount for this loan
-        lastPaymentTime[loanId] = block.timestamp; // Marca o primeiro pagamento como agora
+        numberOfPayments[loanId] = 0; // Initialize the number of payments made for this loan
+        loanStartTime[loanId] = block.timestamp; // Store the start time of the loan
+        
         payable(msg.sender).transfer(ethAmount);
         loanCount++;
-        emit loanCreated(msg.sender, ethAmount, deadline, loanId);
+        emit loanCreated(loanId);
         dex_lock_in += dexAmount;
         return loanId;
     }
 
+    // Declare event at contract level
+    event Debug(uint256 duration, uint256 interestPayment, uint256 value, uint256 time);
+
     function makePayment(uint256 loanId) external payable {
+        if (loanCheck.amount == 0) {
+            if (msg.value > 0) {
+                payable(msg.sender).transfer(msg.value);
+            }
+            return; 
+        }
+        
         Loan storage loanPayment = loans[loanId];
+        bool checked = checkLoan(loanId);
+        if (checked) {
+            uint256 time = loanPayment.deadline - loanStartTime[loanId];
+            uint256 duration = (loanPayment.deadline - loanStartTime[loanId]) * 1e18 / (365 * 24 * 60 * 60);
+            uint256 interestPayment = (loanPayment.amount * interest * duration) / (100 * 1e18);
+            uint256 value = msg.value;
 
-        bool loan_checked = checkLoan(loanId);
-        if (loan_checked) {
-            uint256 durationInYears = (periodicity * 1e18) / 365 days;
-            uint256 interestPayment = (loanPayment.amount * interest * durationInYears) / (100 * 1e18);
+            // "Print" values to Remix log
+            emit Debug(duration, interestPayment, value, time);
 
-            if (msg.value < interestPayment) {
-                revert("Insufficient payment amount");
-            }
+            require(msg.value >= interestPayment, "Insufficient payment amount");
+            numberOfPayments[loanId]++;
 
-            loanPayment.amount -= interestPayment;
-            if (loanPayment.amount <= 0) {
-                _transfer(address(this), msg.sender, loanDexLock[loanId]); // Refund the locked DEX tokens
-                loanPayment.amount = 0;
-                delete lastPaymentTime[loanId]; 
-                delete loanDexLock[loanId];
-            } else {
-                lastPaymentTime[loanId] = block.timestamp; 
-            }
-
-            // Refund the extra value if any
             if (msg.value > interestPayment) {
                 payable(msg.sender).transfer(msg.value - interestPayment);
             }
-        }
-    } 
+        } 
+    }
 
-    function checkLoan(uint256 loanId) public returns (bool) { //TODO
+    event Debug2(uint256 loanId, uint256 numberPayments, uint256 timePassed, uint256 currentSupposedPayment, uint256 finished);
+
+    function checkLoan(uint256 loanId) public returns (bool) {
         Loan storage loanCheck = loans[loanId];
         require(loanCheck.amount > 0, "Loan does not exist or has been terminated");
         require(loanCheck.borrower == msg.sender, "Not the borrower");
 
-        uint256 timeSinceLastPayment = block.timestamp - lastPaymentTime[loanId];
+        uint256 numberPayments = numberOfPayments[loanId]; // Number of payments made
+        uint256 time_passed = block.timestamp - loanStartTime[loanId]; // Time passed since the loan was created
+        uint256 current_suposed_payment = (time_passed / periodicity); // Calculate the current supposed payment based on the periodicity and time passed 
 
-        if (timeSinceLastPayment > periodicity || block.timestamp > loanCheck.deadline) {
+        uint256 finished = (loanCheck.deadline - loanStartTime[loanId]) / periodicity;
+        if ((loanCheck.deadline - loanStartTime[loanId]) < periodicity) {
+            finished = 1; 
+        }
+        emit Debug2(loanId, numberPayments, time_passed, current_suposed_payment, finished);
+
+        if (numberPayments < current_suposed_payment) {
             if (!loanCheck.isBasedNFT) { // Remove the DEX that was locked for the loan and keep it
-                dex_lock_in -= loans[loanId].;
+                dex_lock_in -= loans[loanId].amount * dexSwapRate;
             } else {
                 // punish
             }
 
             loanCheck.amount = 0; // Terminate the loan
-            delete lastPaymentTime[loanId];
             return false;
-        } 
+        } else if (numberPayments == finished) {
+            uint256 dexLocked = loanCheck.amount * dexSwapRate;
+            _transfer(address(this), msg.sender, dexLocked); // Return the DEX locked for the loan
+            dex_lock_in -= dexLocked; // Remove the DEX that was locked for the loan
+            loanCheck.amount = 0; // Terminate the loan
+            return false;
+        }
+        
         return true;
+    }
+
+    function getLoanDetails(uint256 loanId) external view returns (Loan memory) {
+        return loans[loanId];
     }
 
     function terminateLoan(uint256 loanId) external payable {
@@ -161,14 +184,12 @@ contract DecentralizedFinance is ERC20 {
         uint256 total = activeLoan.amount + fee;
         require(msg.value >= total, "Insufficient repayment amount including fee");
 
-        uint256 dexLocked = loanDexLock[loanId];
+        uint256 dexLocked = activeLoan.amount * dexSwapRate;
         activeLoan.amount = 0;
 
-        require(balanceOf(address(this)) >= dexLocked, "Insufficient DEX balance");
         _transfer(address(this), msg.sender, dexLocked);
 
-        delete lastPaymentTime[loanId]; 
-        delete loanDexLock[loanId];
+        dex_lock_in -= dexLocked; // Remove the DEX that was locked for the loan
 
         // Refund the extra value
         if (msg.value > total) {

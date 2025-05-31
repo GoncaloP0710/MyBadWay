@@ -1,7 +1,7 @@
 // const web3 = new Web3(window.ethereum);
 const web3_ganache = new Web3(new Web3.providers.WebsocketProvider('ws://127.0.0.1:8545'));
 // the part is related to the DecentralizedFinance smart contract
-const defi_contractAddress = "0x8D68c43911fd251553d6576D13136Ee4C6aA9D1b";
+const defi_contractAddress = "0x4E91C79af26D2229B3aA53e8D024B4726f1FbCFE";
 import { defi_abi } from "./abi_decentralized_finance.js";
 const defi_contract = new web3_ganache.eth.Contract(defi_abi, defi_contractAddress);
 
@@ -73,37 +73,25 @@ async function sellDex(dexAmount) {
     }
 }
 
-async function checkLoanStatus(loan) {
-    const accounts = await window.ethereum.request({
-        method: "eth_requestAccounts",
-    });
-    const account = accounts[0];
-    try {
-        console.log("Checking loan status for loan:", loan);
-        console.log(loan_dict[loan]);
-
-        const loanStatus = await defi_contract.methods.checkLoan(loan_dict[loan]).send({ 
-            from: account, 
-        });
-
-        console.log("Loan status:", loanStatus);
-        return loanStatus;
-    } catch (error) {
-        console.error("Error checking loan status:", error);
-        throw error;
-    }
-}  
-
 async function listenToLoanCreation() {
     defi_contract.events.loanCreated()
-        .on('data', (event) => {
+        .on('data', async (event) => {
             console.log("Loan created event received:", event.returnValues);
-            
-            const { borrower, amount, deadline, loanId } = event.returnValues;
-            const key = `${borrower}_${amount}_${deadline}`;
-            loan_dict[key] = loanId;
-            console.log("New loan created:", loanId);
-            populatePaymentDropdown();
+
+            const loanId = event.returnValues.loanId; // Extract the loanId correctly
+            if (!loanId) {
+                console.error("Invalid loanId received in event:", event.returnValues);
+                return;
+            }
+
+            try {
+                const loan = await defi_contract.methods.getLoanDetails(loanId).call(); // Fetch loan details
+                loan_dict[loanId] = loan;
+                console.log("New loan created:", loanId, loan);
+                populatePaymentDropdown();
+            } catch (error) {
+                console.error("Error fetching loan details for loanId:", loanId, error);
+            }
         })
         .on('error', (error) => {
             console.error("Error listening to loanCreated event:", error);
@@ -152,14 +140,34 @@ async function loan(dexAmount, deadlineMinutes) {
     }
 }
 
-async function makePayment(loanKey, paymentAmount) {
+async function checkLoanStatus(loan) {
+    const accounts = await window.ethereum.request({
+        method: "eth_requestAccounts",
+    });
+    const account = accounts[0];
+    try {
+        console.log("Checking loan status for loan:", loan);
+        console.log(loan_dict[loan]);
+
+        const loanStatus = await defi_contract.methods.checkLoan(loan_dict[loan]).send({ 
+            from: account, 
+        });
+
+        console.log("Loan status:", loanStatus);
+        return loanStatus;
+    } catch (error) {
+        console.error("Error checking loan status:", error);
+        throw error;
+    }
+}  
+
+async function makePayment(loanId, paymentAmount) {
     const accounts = await window.ethereum.request({
         method: "eth_requestAccounts",
     });
     const account = accounts[0];
 
     // Retrieve the loanId using the key
-    const loanId = loan_dict[loanKey];
     if (!loanId) {
         alert("Invalid loan key selected.");
         return;
@@ -238,7 +246,7 @@ async function loanByNft() {
 }
 
 async function checkLoan() {
-    // TODO: implement this
+
 }
 
 async function getAllTokenURIs() {
