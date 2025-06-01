@@ -35,6 +35,7 @@ contract DecentralizedFinance is ERC20 {
     
     // --------------------- Mapping ---------------------
     mapping(uint256 => Loan) public loans; // loanId => Loan
+    mapping(uint256 => bool) public used_nft;
     // mapping(uint256 => uint256) public numberOfPayments; // loanId => number of payments made
     // mapping(uint256 => uint256) public loanStartTime; // loanId => number of payments made
 
@@ -138,6 +139,7 @@ contract DecentralizedFinance is ERC20 {
                 payable(msg.sender).transfer(msg.value - interestPayment);
             }
         } 
+        checked = checkLoan(loanId);
     }
 
     event Debug2(uint256 loanId, uint256 numberPayments, uint256 timePassed, uint256 currentSupposedPayment, uint256 finished);
@@ -165,7 +167,9 @@ contract DecentralizedFinance is ERC20 {
             if (!loanCheck.isBasedNFT) { // Remove the DEX that was locked for the loan and keep it
                 dex_lock_in -= loans[loanId].amount * dexSwapRate;
             } else {
-                // punish
+                require(loanCheck.lender != address(0), "No lender for this NFT loan, The Loan hasnt been funded yet");
+                loanCheck.nftContract.transferFrom(address(this), loanCheck.lender, loanCheck.nftId);
+                dex_lock_in -= loanCheck.amount * dexSwapRate; 
             }
 
             loanCheck.amount = 0; // Terminate the loan
@@ -248,6 +252,9 @@ contract DecentralizedFinance is ERC20 {
         require(deadline > block.timestamp, "Deadline must be in the future");
         require(deadline <= block.timestamp + maxLoanDuration, "Deadline exceeds max loan duration");
 
+        uint256 nftKey = uint256(keccak256(abi.encodePacked(address(nftContract), nftId)));
+        require(!used_nft[nftKey], "Already exists a loan request for this NFT");
+
         uint256 loanId = loanCount;
 
         loans[loanId] = Loan({
@@ -263,9 +270,12 @@ contract DecentralizedFinance is ERC20 {
             nftId: nftId 
         });
 
+        used_nft[nftKey] = true; 
+
         // loanStartTime[loanId] = block.timestamp; // Store the start time of the loan
         // numberOfPayments[loanId] = 0; // Initialize the number of payments made for this loan
         loanCount++;
+        dex_lock_in += loanAmount * dexSwapRate;
         emit loanCreated(loanId);
         
     }
@@ -274,10 +284,18 @@ contract DecentralizedFinance is ERC20 {
         uint256 foundLoanId = _findNftLoanId(nftContract, nftId, msg.sender, true);
         require(foundLoanId != type(uint256).max, "Loan request not found or already funded");
 
-        Loan storage loanCancel = loans[foundLoanId];
-        loanCancel.amount = 0; 
+        // Verify that the caller owns the NFT
+        require(nftContract.ownerOf(nftId) == msg.sender, "Caller is not the owner of the NFT");
 
-        nftContract.transferFrom(address(this), msg.sender, nftId);
+        Loan storage loanCancel = loans[foundLoanId];
+        require(loanCancel.active, "Loan is not active");
+
+        // Perform loan cancellation logic
+        loanCancel.active = false;
+
+        uint256 nftKey = uint256(keccak256(abi.encodePacked(address(nftContract), nftId)));
+        used_nft[nftKey] = false;
+
     }
 
     function loanByNft(IERC721 nftContract, uint256 nftId) external {

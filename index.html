@@ -51,13 +51,16 @@
   
       <div class="section">
         <h2>NFT Loans</h2>
-        <label for="nftDropdown">Select NFT:</label>
-        <select id="nftDropdown" class="dropdown"></select>
-        <button class="btn" id="requestNftLoanBtn">Request Loan with NFT</button>
-        <button class="btn" id="cancelNftLoanBtn">Cancel NFT Loan Request</button>
-        <button class="btn" id="repayNftLoanBtn">Repay NFT Loan</button>
-        <label for="nftDropdown">Select NFT:</label>
-        <select id="nftDropdown" class="dropdown"></select>
+        <div class="input-group">
+          <label for="nftDropdown">Select NFT:</label>
+          <select id="nftDropdown" class="dropdown"></select>
+          <button class="btn" id="requestNftLoanBtn">Request Loan with NFT</button>
+        </div>
+        <div class="input-group">
+          <label for="loanCancelDropdown">Select Loan to Cancel:</label>
+          <select id="loanCancelDropdown" class="dropdown"></select>
+          <button class="btn" id="cancelLoanNewBtn">Cancel Loan</button>
+        </div>
       </div>
     </section>
   
