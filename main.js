@@ -719,22 +719,13 @@ function addExpandableItem(listElement, loanId, loanData) {
 }
 
 window.connectMetaMask = connectMetaMask;
-window.buyDex = buyDex;
-window.sellDex = sellDex;
-window.loan = loan;
 window.getRateEthToDex = getRateEthToDex;
-window.makeLoanRequestByNft = makeLoanRequestByNft;
-window.loanByNft = loanByNft;
-// window.checkLoan = checkLoan;
-window.listenToLoanCreation = listenToLoanCreation;
 window.getDexBalance = getDexBalance;
 window.getEthBalance = getEthBalance;
-window.terminateLoan = terminateLoan;
-// windows.getTotalBorrowedAndNotPaidBackEth = getTotalBorrowedAndNotPaidBackEth;
-// windows.checkLoanStatus = checkLoanStatus;
-// windows.getAllTokenURIs = getAllTokenURIs;
+window.listenToLoanCreation = listenToLoanCreation;
 
 document.addEventListener("DOMContentLoaded", () => {
+    // Buy DEX Button
     document.getElementById("buyDexBtn").onclick = async () => {
         const ethAmount = parseInt(prompt("Quantos ETH você quer usar para comprar DEX? (apenas número inteiro)"));
         if (!isNaN(ethAmount) && ethAmount > 0) {
@@ -744,6 +735,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
+    // Sell DEX Button
     document.getElementById("sellDexBtn").onclick = async () => {
         const dexAmount = parseInt(prompt("Quantos DEX você quer vender? (apenas número inteiro)"));
         if (!isNaN(dexAmount) && dexAmount > 0) {
@@ -752,18 +744,18 @@ document.addEventListener("DOMContentLoaded", () => {
             alert("Valor inválido.");
         }
     };
+
+    // Request Loan Button
     document.getElementById("requestLoanBtn").onclick = () => {
         const dexAmount = prompt("DEX amount?");
         const deadline = prompt("Deadline (timestamp)?");
         if (dexAmount && deadline) loan(dexAmount, deadline);
     };
-    // document.getElementById("repayLoanBtn").onclick = () => {
-    //     const key = prompt("Chave do empréstimo (ex: borrower_amount_deadline)?");
-    //     const amount = prompt("Valor do pagamento?");
-    //     if (key && amount) makePayment(key, amount);
-    // };
+
+    // Request NFT Loan Button
     document.getElementById("requestNftLoanBtn").onclick = makeLoanRequestByNft;
 
+    // Terminate Loan Button
     document.getElementById("terminateLoanBtn").onclick = async () => {
         const loanId = prompt("Digite o ID do empréstimo (loanId) que deseja terminar:");
         if (!loanId || isNaN(loanId)) {
@@ -772,7 +764,8 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         await terminateLoan(loanId);
     };
-    
+
+    // Make Payment Button
     document.getElementById("makePaymentBtn").onclick = async () => {
         const loanKey = document.getElementById("paymentLoanDropdown").value;
         const paymentAmount = parseFloat(document.getElementById("paymentAmountInput").value);
@@ -788,22 +781,41 @@ document.addEventListener("DOMContentLoaded", () => {
             console.error(error);
         }
     };
+
+    // Mint NFT Button
     document.getElementById("mintNftBtn").onclick = mintNFT;
 
-    const setDexSwapRateBtn = document.getElementById("setDexSwapRateBtn");
+    // Set DEX Swap Rate Button
+    document.getElementById("setDexSwapRateBtn").onclick = async () => {
+        const newRate = prompt("Enter the new DEX swap rate:");
+        if (!newRate || isNaN(newRate) || Number(newRate) <= 0) {
+            alert("Invalid swap rate. Please enter a positive number.");
+            return;
+        }
+        try {
+            await setDexSwapRate(newRate);
+        } catch (error) {
+            console.error("Error setting DEX swap rate:", error);
+        }
+    };
 
-    if (setDexSwapRateBtn) {
-        setDexSwapRateBtn.onclick = setDexSwapRate;
-        console.log("Set DEX Swap Rate button is bound to the function.");
-    } else {
-        console.error("Set DEX Swap Rate button not found in the DOM.");
-    }
+    // Cancel Loan Button
+    document.getElementById("cancelLoanNewBtn").onclick = async () => {
+        const loanDropdown = document.getElementById("loanCancelDropdown");
+        const selectedLoanId = loanDropdown.value;
 
-    const cancelLoanNewBtn = document.getElementById("cancelLoanNewBtn");
-    if (cancelLoanNewBtn) {
-        cancelLoanNewBtn.onclick = cancelLoan;
-        console.log("Cancel Loan button (new) is bound to the function.");
-    } else {
-        console.error("Cancel Loan button (new) not found in the DOM.");
-    }
+        if (!selectedLoanId) {
+            alert("Please select a loan to cancel.");
+            return;
+        }
+
+        try {
+            await cancelLoan(selectedLoanId);
+        } catch (error) {
+            console.error("Error canceling loan:", error);
+        }
+    };
+
+    listenToNftMinting();
+    listenToLoanCreation();
 });
