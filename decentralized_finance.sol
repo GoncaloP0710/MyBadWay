@@ -245,16 +245,11 @@ contract DecentralizedFinance is ERC20 {
     }
 
     function makeLoanRequestByNft(IERC721 nftContract, uint256 nftId, uint256 loanAmount, uint256 deadline) external {
-        IERC721 nft = IERC721(nftContract);
-
         require(loanAmount > 0, "Loan amount must be greater than 0");
-        require(nft.ownerOf(nftId) == msg.sender, "You do not own this NFT");
+        require(nftContract.ownerOf(nftId) == msg.sender, "You do not own this NFT");
         require(deadline > block.timestamp, "Deadline must be in the future");
         require(deadline <= block.timestamp + maxLoanDuration, "Deadline exceeds max loan duration");
-
-        uint256 nftKey = uint256(keccak256(abi.encodePacked(address(nftContract), nftId)));
-        require(!used_nft[nftKey], "Already exists a loan request for this NFT");
-
+        require(!used_nft[nftId], "Already exists a loan request for this NFT");
         uint256 loanId = loanCount;
 
         loans[loanId] = Loan({
@@ -262,26 +257,24 @@ contract DecentralizedFinance is ERC20 {
             amount: loanAmount,
             lender: address(0),
             borrower: msg.sender,
-            active: true,
+            active: false,
             numberOfPayments: 0,
             startTime: block.timestamp,
             isBasedNFT: true,
-            nftContract: nft, 
+            nftContract: nftContract, 
             nftId: nftId 
         });
 
-        used_nft[nftKey] = true; 
-
-        // loanStartTime[loanId] = block.timestamp; // Store the start time of the loan
-        // numberOfPayments[loanId] = 0; // Initialize the number of payments made for this loan
+        used_nft[nftId] = true; 
         loanCount++;
         dex_lock_in += loanAmount * dexSwapRate;
         emit loanCreated(loanId);
-        
+
+        nftContract.transferFrom(msg.sender, address(this), nftId); // Transfer NFT to the contract
     }
 
     function cancelLoanRequestByNft(IERC721 nftContract, uint256 nftId) external {
-        uint256 foundLoanId = _findNftLoanId(nftContract, nftId, msg.sender, true);
+        uint256 foundLoanId = _findNftLoanId(nftContract, nftId, msg.sender);
         require(foundLoanId != type(uint256).max, "Loan request not found or already funded");
 
         // Verify that the caller owns the NFT
@@ -292,14 +285,12 @@ contract DecentralizedFinance is ERC20 {
 
         // Perform loan cancellation logic
         loanCancel.active = false;
-
-        uint256 nftKey = uint256(keccak256(abi.encodePacked(address(nftContract), nftId)));
-        used_nft[nftKey] = false;
+        used_nft[nftId] = false;
 
     }
 
     function loanByNft(IERC721 nftContract, uint256 nftId) external {
-        uint256 foundLoanId = _findNftLoanId(nftContract, nftId, msg.sender, true);
+        uint256 foundLoanId = _findNftLoanId(nftContract, nftId, msg.sender);
         require(foundLoanId != type(uint256).max, "Loan request not found or already funded");
 
         Loan storage loanNft = loans[foundLoanId];
@@ -310,15 +301,18 @@ contract DecentralizedFinance is ERC20 {
         // Transfere DEX do lender para o contrato
         _transfer(msg.sender, address(this), dexToLock);
         loanNft.lender = msg.sender;
+        loanNft.active = true; 
         dex_lock_in += dexToLock;
 
         // Envia ETH para o tomador do empréstimo
         payable(loanNft.borrower).transfer(loanNft.amount);
+        loanNft.nftContract.transferFrom(address(this), msg.sender, loanNft.nftId); // Transfer NFT to the lender
 
         emit loanCreated(foundLoanId);
     }
 
-    function _findNftLoanId(IERC721 nftContract, uint256 nftId, address borrower, bool onlyUnfunded) internal view returns (uint256) {
+    // Only returns loans that are not funded yet
+    function _findNftLoanId(IERC721 nftContract, uint256 nftId, address borrower) internal view returns (uint256) {
         for (uint256 i = 0; i < loanCount; i++) {
             Loan storage loanToFind = loans[i];
             if (
@@ -326,8 +320,7 @@ contract DecentralizedFinance is ERC20 {
                 address(loanToFind.nftContract) == address(nftContract) &&
                 loanToFind.nftId == nftId &&
                 loanToFind.borrower == borrower &&
-                (!onlyUnfunded || loanToFind.lender == address(0)) &&
-                loanToFind.active
+                loanToFind.lender == address(0)
             ) {
                 return i;
             }
