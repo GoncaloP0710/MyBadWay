@@ -15,20 +15,31 @@ const nftDropdownDict = {};
 const loanCancelDropdownDict = {};
 const loanNFTToAceptDict = {};
 
-// Dictionary fetching
-await fetchAndPopulateLoans();
-await fetchAndPopulateNfts();
+async function initializeApp() {
+    try {
+        // Dictionary fetching
+        await fetchAndPopulateLoans();
+        await fetchAndPopulateNfts();
 
-// Droopdown Menus fetching
-populatePaymentDropdown();
-populateNftDropdown();
-populateLoanCancelDropdownNew();
+        // Dropdown Menus fetching
+        populatePaymentDropdown();
+        populateNftDropdown();
+        populateLoanCancelDropdownNew();
 
-// Fetch initial balances and rates
-getEthBalance();
-getUserDexBalance();
-getDexBalance();
-getRateEthToDex();
+        // Fetch initial balances and rates
+        getEthBalance();
+        getUserDexBalance();
+        getDexBalance();
+        getRateEthToDex();
+
+        console.log("App initialized successfully.");
+    } catch (error) {
+        console.error("Error initializing app:", error);
+    }
+}
+
+// Call the initialization function
+initializeApp();
 
 web3_ganache.currentProvider.on('connect', () => {
     console.log("WebSocket connected");
