@@ -109,14 +109,16 @@ contract DecentralizedFinance is ERC20 {
 
     function makePayment(uint256 loanId) external payable {
         Loan storage loanPayment = loans[loanId];
-        if (loanPayment.amount == 0) {
+        bool checked = checkLoan(loanId);
+        
+        // Return money if the loan is not active
+        if (loanPayment.active == false) {
             if (msg.value > 0) {
                 payable(msg.sender).transfer(msg.value);
             }
             return; 
         }
 
-        bool checked = checkLoan(loanId);
         if (checked) {
             // uint256 time = loanPayment.deadline - loanStartTime[loanId];
             // uint256 duration = (loanPayment.deadline - loanStartTime[loanId]) * 1e18 / (365 * 24 * 60 * 60);
@@ -154,10 +156,10 @@ contract DecentralizedFinance is ERC20 {
 
         // uint256 finished = (loanCheck.deadline - loanStartTime[loanId]) / periodicity;
         uint256 nToFinish = (loanCheck.deadline - loanCheck.startTime) / periodicity; 
-        if ((loanCheck.deadline - loanStartTime[loanId]) < periodicity) {
+        if ((loanCheck.deadline - loanCheck.startTime) < periodicity) {
             nToFinish = 1; 
         }
-        emit Debug2(loanId, numberPayments, time_passed, current_suposed_payment, finished);
+        emit Debug2(loanId, numberPayments, time_passed, current_suposed_payment, nToFinish);
 
         if (numberPayments < current_suposed_payment) {
             if (!loanCheck.isBasedNFT) { // Remove the DEX that was locked for the loan and keep it
@@ -224,6 +226,10 @@ contract DecentralizedFinance is ERC20 {
         return balanceOf(address(this));
     }
 
+    function getDexSwapRate() external view returns (uint256) {
+        return dexSwapRate;
+    }
+
     function makeLoanRequestByNft(IERC721 nftContract, uint256 nftId, uint256 loanAmount, uint256 deadline) external {
         IERC721 nft = IERC721(nftContract);
 
@@ -250,6 +256,7 @@ contract DecentralizedFinance is ERC20 {
         // loanStartTime[loanId] = block.timestamp; // Store the start time of the loan
         // numberOfPayments[loanId] = 0; // Initialize the number of payments made for this loan
         loanCount++;
+        emit loanCreated(loanId);
         
     }
 
@@ -298,5 +305,30 @@ contract DecentralizedFinance is ERC20 {
             }
         }
         return type(uint256).max;
+    }
+
+    function getLoansByBorrower() external view returns (Loan[] memory) {
+        uint256 count = 0;
+
+        // First, count how many loans belong to the borrower
+        for (uint256 i = 0; i < loanCount; i++) {
+            if (loans[i].borrower == msg.sender) {
+                count++;
+            }
+        }
+
+        // Create an array to store the loans
+        Loan[] memory borrowerLoans = new Loan[](count);
+        uint256 index = 0;
+
+        // Populate the array with the borrower's loans
+        for (uint256 i = 0; i < loanCount; i++) {
+            if (loans[i].borrower == msg.sender) {
+                borrowerLoans[index] = loans[i];
+                index++;
+            }
+        }
+
+        return borrowerLoans;
     }
 }

@@ -1,73 +1,92 @@
 body {
-    font-family: 'Roboto', Arial, sans-serif;
-    background: #f5f7fa;
-    margin: 0;
-    padding: 0;
-    color: #222;
-  }
-  
-  header {
-    background: #222;
-    color: #fff;
-    padding: 1.5rem 0;
-    text-align: center;
-    letter-spacing: 2px;
-    font-size: 2rem;
-    font-weight: 700;
-  }
-  
-  main {
-    max-width: 600px;
-    margin: 2rem auto;
-    background: #fff;
-    border-radius: 10px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-    padding: 2rem;
-  }
-  
-  h2 {
-    margin-top: 2rem;
-    color: #2a7ae2;
-    font-size: 1.3rem;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 0.5rem;
-  }
-  
-  .btn {
-    display: inline-block;
-    margin: 0.5rem 0.5rem 0.5rem 0;
-    padding: 0.7rem 1.5rem;
-    background: #2a7ae2;
-    color: #fff;
-    border: none;
-    border-radius: 5px;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-  
-  .btn:hover {
-    background: #155a9c;
-  }
-  
-  .input-group {
-    margin: 1rem 0;
-    display: flex;
-    flex-direction: column;
-  }
-  
-  .input-group label {
-    margin-bottom: 0.3rem;
-    font-weight: 500;
-  }
-  
-  .input-group select {
-    padding: 0.5rem;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 1rem;
-  }
-  
-  .section {
-    margin-bottom: 2rem;
-  }
+  font-family: 'Roboto', sans-serif;
+  margin: 0;
+  background-color: #f4f4f4;
+  color: #333;
+}
+
+header {
+  background-color: #222;
+  color: white;
+  padding: 1rem;
+  text-align: center;
+}
+
+.grid-container {
+  display: grid;
+  grid-template-columns: 1fr 2fr; /* Give more room to dictionaries */
+  gap: 20px;
+  padding: 20px;
+  height: calc(100vh - 80px); /* 80px accounts for header */
+  box-sizing: border-box;
+}
+
+.dict-box {
+  background-color: #fff;
+  padding: 15px;
+  border-radius: 8px;
+  overflow: hidden;
+  height: 50%; /* Fixed height for each dictionary */
+  display: flex;
+  flex-direction: column;
+}
+
+.dict-list {
+  list-style-type: none;
+  padding: 0;
+  overflow-y: auto; /* Enable vertical scrolling */
+  flex: 1;
+  max-height: 100%; /* Prevent the list from expanding beyond the box */
+}
+
+.dict-list li {
+  margin-bottom: 10px;
+  background-color: #f1f1f1;
+  padding: 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-family: monospace;
+  white-space: pre-wrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-height: 4.5em; /* roughly 3 lines */
+  transition: max-height 0.3s ease;
+}
+
+.dict-list li.expanded {
+  max-height: none; /* Allow full expansion */
+  overflow-y: auto;
+  background-color: #e8e8e8; /* Slightly different background for expanded state */
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.controls .section {
+  margin-bottom: 20px;
+}
+
+.controls button {
+  margin-bottom: 10px;
+  width: 100%; /* Ensure buttons take full width */
+}
+
+.balances {
+  background-color: #f9f9f9;
+  padding: 15px;
+  border-radius: 8px;
+  margin-top: 20px;
+}
+
+.balances h2 {
+  margin-bottom: 10px;
+}
+
+.balances p {
+  margin: 5px 0;
+  font-size: 16px;
+  color: #333;
+}

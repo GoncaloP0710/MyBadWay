@@ -32,4 +32,30 @@ contract SimpleNFT is ERC721URIStorage, Ownable {
         IERC721 nft = IERC721(nftContractAddress); // Cast address to IERC721
         return nft.ownerOf(tokenId); // Call IERC721 function
     }
+
+    function getNftsByOwner() external view returns (uint256[] memory) {
+        uint256 totalTokens = tokenIdCounter.current();
+        uint256 count = 0;
+
+        // First, count how many NFTs are owned by msg.sender
+        for (uint256 i = 1; i <= totalTokens; i++) {
+            if (ownerOf(i) == msg.sender) {
+                count++;
+            }
+        }
+
+        // Create an array to store the token IDs
+        uint256[] memory ownedTokens = new uint256[](count);
+        uint256 index = 0;
+
+        // Populate the array with the token IDs owned by msg.sender
+        for (uint256 i = 1; i <= totalTokens; i++) {
+            if (ownerOf(i) == msg.sender) {
+                ownedTokens[index] = i;
+                index++;
+            }
+        }
+
+        return ownedTokens;
+    }
 }
