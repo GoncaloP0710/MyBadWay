@@ -11,6 +11,9 @@ contract DecentralizedFinance is ERC20 {
         uint256 amount;
         address lender;
         address borrower;
+        bool active;
+        uint256 numberOfPayments;
+        uint256 startTime;
         bool isBasedNFT;
         IERC721 nftContract;
         uint256 nftId;
@@ -32,8 +35,8 @@ contract DecentralizedFinance is ERC20 {
     
     // --------------------- Mapping ---------------------
     mapping(uint256 => Loan) public loans; // loanId => Loan
-    mapping(uint256 => uint256) public numberOfPayments; // loanId => number of payments made
-    mapping(uint256 => uint256) public loanStartTime; // loanId => number of payments made
+    // mapping(uint256 => uint256) public numberOfPayments; // loanId => number of payments made
+    // mapping(uint256 => uint256) public loanStartTime; // loanId => number of payments made
 
     // --------------------- Events ---------------------
     event loanCreated(uint256 loanId);
@@ -84,13 +87,16 @@ contract DecentralizedFinance is ERC20 {
             amount: ethAmount,
             lender: address(this),
             borrower: msg.sender,
+            active: true,
+            numberOfPayments: 0,
+            startTime: block.timestamp,
             isBasedNFT: false,
             nftContract: IERC721(address(0)), 
             nftId: 0 
         });
 
-        numberOfPayments[loanId] = 0; // Initialize the number of payments made for this loan
-        loanStartTime[loanId] = block.timestamp; // Store the start time of the loan
+        // numberOfPayments[loanId] = 0; // Initialize the number of payments made for this loan
+        // loanStartTime[loanId] = block.timestamp; // Store the start time of the loan
         payable(msg.sender).transfer(ethAmount); // Transfer ETH to the borrower
         loanCount++;
         emit loanCreated(loanId);
@@ -112,8 +118,10 @@ contract DecentralizedFinance is ERC20 {
 
         bool checked = checkLoan(loanId);
         if (checked) {
-            uint256 time = loanPayment.deadline - loanStartTime[loanId];
-            uint256 duration = (loanPayment.deadline - loanStartTime[loanId]) * 1e18 / (365 * 24 * 60 * 60);
+            // uint256 time = loanPayment.deadline - loanStartTime[loanId];
+            // uint256 duration = (loanPayment.deadline - loanStartTime[loanId]) * 1e18 / (365 * 24 * 60 * 60);
+            uint256 time = loanPayment.deadline - loanPayment.startTime; 
+            uint256 duration = time * 1e18 / (365 * 24 * 60 * 60); 
             uint256 interestPayment = (loanPayment.amount * interest * duration) / (100 * 1e18);
             uint256 value = msg.value;
 
@@ -121,7 +129,8 @@ contract DecentralizedFinance is ERC20 {
             emit Debug(duration, interestPayment, value, time);
 
             require(msg.value >= interestPayment, "Insufficient payment amount");
-            numberOfPayments[loanId]++;
+            // numberOfPayments[loanId]++;
+            loanPayment.numberOfPayments += 1; 
 
             if (msg.value > interestPayment) {
                 payable(msg.sender).transfer(msg.value - interestPayment);
@@ -133,16 +142,20 @@ contract DecentralizedFinance is ERC20 {
 
     function checkLoan(uint256 loanId) public returns (bool) {
         Loan storage loanCheck = loans[loanId];
-        require(loanCheck.amount > 0, "Loan does not exist or has been terminated");
+        // require(loanCheck.amount > 0, "Loan does not exist or has been terminated");
+        require(loanCheck.active, "Loan does not exist or has been terminated");
         require(loanCheck.borrower == msg.sender, "Not the borrower");
 
-        uint256 numberPayments = numberOfPayments[loanId]; // Number of payments made
-        uint256 time_passed = block.timestamp - loanStartTime[loanId]; // Time passed since the loan was created
+        // uint256 numberPayments = numberOfPayments[loanId]; // Number of payments made
+        uint256 numberPayments = loanCheck.numberOfPayments; // Number of payments made
+        // uint256 time_passed = block.timestamp - loanStartTime[loanId]; // Time passed since the loan was created
+        uint256 time_passed = block.timestamp - loanCheck.startTime; // Time passed since the loan was created
         uint256 current_suposed_payment = (time_passed / periodicity); // Calculate the current supposed payment based on the periodicity and time passed 
 
-        uint256 finished = (loanCheck.deadline - loanStartTime[loanId]) / periodicity;
+        // uint256 finished = (loanCheck.deadline - loanStartTime[loanId]) / periodicity;
+        uint256 nToFinish = (loanCheck.deadline - loanCheck.startTime) / periodicity; 
         if ((loanCheck.deadline - loanStartTime[loanId]) < periodicity) {
-            finished = 1; 
+            nToFinish = 1; 
         }
         emit Debug2(loanId, numberPayments, time_passed, current_suposed_payment, finished);
 
@@ -155,11 +168,12 @@ contract DecentralizedFinance is ERC20 {
 
             loanCheck.amount = 0; // Terminate the loan
             return false;
-        } else if (numberPayments == finished) {
+        } else if (numberPayments == nToFinish) {
             uint256 dexLocked = loanCheck.amount * dexSwapRate;
             _transfer(address(this), msg.sender, dexLocked); // Return the DEX locked for the loan
             dex_lock_in -= dexLocked; // Remove the DEX that was locked for the loan
-            loanCheck.amount = 0; // Terminate the loan
+            // loanCheck.amount = 0; // Terminate the loan
+            loanCheck.active = false; // Mark the loan as inactive
             return false;
         }
         
@@ -173,7 +187,8 @@ contract DecentralizedFinance is ERC20 {
     function terminateLoan(uint256 loanId) external payable {
         Loan storage activeLoan = loans[loanId];
 
-        require(activeLoan.amount > 0, "Loan already terminated or does not exist");
+        // require(activeLoan.amount > 0, "Loan already terminated or does not exist");
+        require(activeLoan.active, "Loan already terminated or does not exist");
         require(activeLoan.borrower == msg.sender, "Not the borrower");
         require(!activeLoan.isBasedNFT, "NFT-based loans must use a different function");
 
@@ -182,7 +197,8 @@ contract DecentralizedFinance is ERC20 {
         require(msg.value >= total, "Insufficient repayment amount including fee");
 
         uint256 dexLocked = activeLoan.amount * dexSwapRate;
-        activeLoan.amount = 0;
+        // activeLoan.amount = 0;
+        activeLoan.active = false; // Mark the loan as inactive
 
         _transfer(address(this), msg.sender, dexLocked);
 
@@ -223,13 +239,16 @@ contract DecentralizedFinance is ERC20 {
             amount: loanAmount,
             lender: address(0),
             borrower: msg.sender,
+            active: true,
+            numberOfPayments: 0,
+            startTime: block.timestamp,
             isBasedNFT: true,
             nftContract: nft, 
             nftId: nftId 
         });
 
-        loanStartTime[loanId] = block.timestamp; // Store the start time of the loan
-        numberOfPayments[loanId] = 0; // Initialize the number of payments made for this loan
+        // loanStartTime[loanId] = block.timestamp; // Store the start time of the loan
+        // numberOfPayments[loanId] = 0; // Initialize the number of payments made for this loan
         loanCount++;
         
     }
@@ -273,7 +292,7 @@ contract DecentralizedFinance is ERC20 {
                 loanToFind.nftId == nftId &&
                 loanToFind.borrower == borrower &&
                 (!onlyUnfunded || loanToFind.lender == address(0)) &&
-                loanToFind.amount > 0
+                loanToFind.active
             ) {
                 return i;
             }
