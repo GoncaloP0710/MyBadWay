@@ -763,9 +763,7 @@ document.addEventListener("DOMContentLoaded", () => {
     //     if (key && amount) makePayment(key, amount);
     // };
     document.getElementById("requestNftLoanBtn").onclick = makeLoanRequestByNft;
-    document.getElementById("repayNftLoanBtn").onclick = () => {
-        alert("Função de repagamento de NFT ainda não implementada.");
-    };
+
     document.getElementById("terminateLoanBtn").onclick = async () => {
         const loanId = prompt("Digite o ID do empréstimo (loanId) que deseja terminar:");
         if (!loanId || isNaN(loanId)) {
