@@ -1,7 +1,7 @@
 // const web3 = new Web3(window.ethereum);
 const web3_ganache = new Web3(new Web3.providers.WebsocketProvider('ws://127.0.0.1:8545'));
 // the part is related to the DecentralizedFinance smart contract
-const defi_contractAddress = "0x518f2C5267b877e0579Ec8555EA0c0C638A61754";
+const defi_contractAddress = "0x5F6EE2DF942803181aEe20A0a95130f7cf710c90";
 import { defi_abi } from "./abi_decentralized_finance.js";
 const defi_contract = new web3_ganache.eth.Contract(defi_abi, defi_contractAddress);
 
@@ -15,6 +15,7 @@ const nft_dict = {};
 
 fetchAndPopulateLoans();
 fetchAndPopulateNfts();
+
 getEthBalance();
 getUserDexBalance();
 getDexBalance();
@@ -222,28 +223,39 @@ async function terminateLoan(loanId) {
     });
     const account = accounts[0];
 
-    // Peça o valor total ao usuário
-    const repayAmount = prompt("Digite o valor total (em ETH) para quitar o empréstimo (principal + taxa):");
-    if (!repayAmount || isNaN(repayAmount) || Number(repayAmount) <= 0) {
-        alert("Valor inválido.");
-        return;
-    }
-
     try {
-        const valueWei = web3_ganache.utils.toWei(repayAmount.toString(), "ether");
-        console.log("Terminating loan with ID:", loanId, "and value:", valueWei);
+        // Fetch the repayment value from the contract
+        const repayAmountWei = await defi_contract.methods.getValueToTerminateLoan(loanId).call({ from: account });
+        const repayAmountEth = web3_ganache.utils.fromWei(repayAmountWei, "ether");
+        console.log(`Repayment amount for loan ID ${loanId}: ${repayAmountEth} ETH`);
+
+        // Confirm with the user before proceeding
+        const confirmTermination = confirm(`The total repayment amount is ${repayAmountEth} ETH. Do you want to proceed?`);
+        if (!confirmTermination) {
+            alert("Loan termination canceled.");
+            return;
+        }
+
+        // Terminate the loan
+        console.log("Terminating loan with ID:", loanId, "and value:", repayAmountWei);
         const terminateResult = await defi_contract.methods.terminateLoan(loanId).send({
             from: account,
-            value: valueWei,
-            gas: 3000000
+            value: repayAmountWei,
+            gas: 3000000, // Adjust gas limit as needed
         });
+
         console.log("Loan terminated successfully:", terminateResult);
+        alert("Loan terminated successfully!");
+
+        // Update balances
         getEthBalance();
         getUserDexBalance();
         getDexBalance();
+
         return terminateResult;
     } catch (error) {
         console.error("Error terminating loan:", error);
+        alert("Error terminating loan. Check the console for details.");
         throw error;
     }
 }
@@ -637,10 +649,6 @@ document.addEventListener("DOMContentLoaded", () => {
     //     const amount = prompt("Valor do pagamento?");
     //     if (key && amount) makePayment(key, amount);
     // };
-    document.getElementById("checkLoanBtn").onclick = () => {
-        const key = document.getElementById("loanDropdown").value;
-        if (key) checkLoanStatus(key);
-    };
     document.getElementById("requestNftLoanBtn").onclick = makeLoanRequestByNft;
     document.getElementById("cancelNftLoanBtn").onclick = cancelLoanRequestByNft;
     document.getElementById("repayNftLoanBtn").onclick = () => {
@@ -691,6 +699,4 @@ document.addEventListener("DOMContentLoaded", () => {
 
     enableExpandableList('loanDictList');
     enableExpandableList('nftDictList');
-
-    document.getElementById("requestNftLoanBtn").onclick = makeLoanRequestByNft;
 });

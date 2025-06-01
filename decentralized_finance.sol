@@ -212,6 +212,16 @@ contract DecentralizedFinance is ERC20 {
         }
     }
 
+    function getValueToTerminateLoan(uint256 loanId) external view returns (uint256) {
+        Loan storage activeLoan = loans[loanId];
+        require(activeLoan.active, "Loan already terminated or does not exist");
+        require(activeLoan.borrower == msg.sender, "Not the borrower");
+        require(!activeLoan.isBasedNFT, "NFT-based loans must use a different function");
+
+        uint256 fee = (activeLoan.amount * termination) / 100;
+        return activeLoan.amount + fee; // Return the total amount to terminate the loan
+    }
+
     function setDexSwapRate(uint256 newRate) external {
         require(msg.sender == owner, "Only owner can set the DEX swap rate");
         require(newRate > 0, "New rate must be greater than 0");

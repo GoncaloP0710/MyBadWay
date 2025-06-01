@@ -1,36 +1,43 @@
+/* Apply a background image to the entire page */
 body {
   font-family: 'Roboto', sans-serif;
   margin: 0;
-  background-color: #f4f4f4;
-  color: #333;
+  background-image: url('background.jpg'); /* Replace 'background.jpg' with your image path */
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed; /* Makes the background stay fixed while scrolling */
+  color: white; /* Set default text color to white */
 }
 
+/* Header styling */
 header {
-  background-color: #222;
+  background-color: rgba(0, 0, 0, 0.385); /* Translucent black */
   color: white;
   padding: 1rem;
   text-align: center;
 }
 
+/* Grid container for layout */
 .grid-container {
   display: grid;
   grid-template-columns: 1fr 2fr; /* Give more room to dictionaries */
-  gap: 20px;
-  padding: 20px;
+  gap: 30px; /* Increased gap between containers */
+  padding: 30px; /* Increased padding around the grid */
   height: calc(100vh - 80px); /* 80px accounts for header */
   box-sizing: border-box;
 }
 
-.dict-box {
-  background-color: #fff;
-  padding: 15px;
+/* Translucent containers for dictionaries and controls */
+.dict-box, .balances, .controls .section {
+  background-color: rgba(32, 32, 32, 0.4); /* Translucent dark background */
+  padding: 20px; /* Increased padding inside the containers */
   border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.9); /* Subtle shadow for depth */
   overflow: hidden;
-  height: 50%; /* Fixed height for each dictionary */
-  display: flex;
-  flex-direction: column;
+  margin-bottom: 20px; /* Added margin between stacked containers */
 }
 
+/* Styling for dictionary lists */
 .dict-list {
   list-style-type: none;
   padding: 0;
@@ -41,7 +48,7 @@ header {
 
 .dict-list li {
   margin-bottom: 10px;
-  background-color: #f1f1f1;
+  background-color: rgba(0, 0, 0, 0.385); /* Slightly translucent background for list items */
   padding: 10px;
   border-radius: 5px;
   cursor: pointer;
@@ -51,42 +58,143 @@ header {
   text-overflow: ellipsis;
   max-height: 4.5em; /* roughly 3 lines */
   transition: max-height 0.3s ease;
+  color: white; /* Ensure list item text is white */
 }
 
 .dict-list li.expanded {
   max-height: none; /* Allow full expansion */
   overflow-y: auto;
-  background-color: #e8e8e8; /* Slightly different background for expanded state */
+  background-color: rgba(0, 0, 0, 0.385); /* Slightly different translucent background for expanded state */
+  color: rgb(255, 255, 255); /* Expanded text color */
 }
 
-.controls {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.controls .section {
-  margin-bottom: 20px;
-}
-
+/* Buttons styling */
 .controls button {
   margin-bottom: 10px;
   width: 100%; /* Ensure buttons take full width */
+  background-color: rgba(0, 0, 0, 0.385); /* Translucent blue */
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.3s ease;
 }
 
-.balances {
-  background-color: #f9f9f9;
-  padding: 15px;
-  border-radius: 8px;
-  margin-top: 20px;
+.controls button:hover {
+  background-color: rgba(0, 255, 89, 0.634); /* Fully opaque on hover */
 }
 
-.balances h2 {
+/* Titles styling */
+header h1, .balances h2, .controls .section h2, .dict-box h2 {
+  color: #22f46bb9; /* Gold color for titles */
   margin-bottom: 10px;
 }
 
 .balances p {
   margin: 5px 0;
   font-size: 16px;
-  color: #333;
+  color: white; /* Ensure balances text is white */
+}
+
+/* Styling for input fields */
+.input-group input {
+  width: 100%; /* Ensure it takes full width of the container */
+  max-width: 300px; /* Limit the maximum width */
+  padding: 10px;
+  font-size: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.5); /* Subtle border */
+  border-radius: 5px;
+  background-color: rgba(0, 0, 0, 0.6); /* Translucent dark background */
+  color: white;
+  transition: border-color 0.3s ease, background-color 0.3s ease;
+  box-sizing: border-box; /* Include padding and border in width */
+}
+
+/* Add hover and focus effects for input fields */
+.input-group input:hover,
+.input-group input:focus {
+  border-color: #FFD700; /* Highlight border on hover/focus */
+  background-color: rgba(0, 0, 0, 0.8); /* Slightly darker background */
+}
+
+/* Align input and button horizontally */
+.input-group {
+  display: flex;
+  flex-wrap: wrap; /* Allow wrapping on smaller screens */
+  gap: 10px; /* Add spacing between elements */
+  align-items: center; /* Align input and button vertically */
+}
+
+/* Styling for buttons inside input groups */
+.input-group button {
+  background-color: rgba(0, 0, 0, 0.385); /* Translucent blue */
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.3s ease;
+}
+
+.input-group button:hover {
+  background-color: rgba(0, 255, 89, 0.634); /* Fully opaque on hover */
+}
+
+/* Styling for dropdown menus */
+.dropdown {
+  width: 100%;
+  padding: 10px;
+  font-size: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.5); /* Subtle border */
+  border-radius: 5px;
+  background-color: rgba(0, 0, 0, 0.6); /* Translucent dark background */
+  color: white;
+  appearance: none; /* Remove default dropdown arrow styling */
+  cursor: pointer;
+  transition: border-color 0.3s ease, background-color 0.3s ease;
+}
+
+/* Add hover and focus effects for dropdowns */
+.dropdown:hover,
+.dropdown:focus {
+  border-color: rgba(0, 255, 89, 0.634); /* Highlight border on hover/focus */
+  background-color: rgba(0, 0, 0, 0.8); /* Slightly darker background */
+}
+
+/* Styling for input fields */
+.input-group input {
+  width: 100%;
+  padding: 10px;
+  font-size: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.5); /* Subtle border */
+  border-radius: 5px;
+  background-color: rgba(0, 0, 0, 0.6); /* Translucent dark background */
+  color: white;
+  transition: border-color 0.3s ease, background-color 0.3s ease;
+}
+
+/* Add hover and focus effects for input fields */
+.input-group input:hover,
+.input-group input:focus {
+  border-color: rgba(0, 255, 89, 0.634); /* Highlight border on hover/focus */
+  background-color: rgba(0, 0, 0, 0.8); /* Slightly darker background */
+}
+
+/* Styling for buttons inside input groups */
+.input-group button {
+  background-color: rgba(0, 0, 0, 0.6); /* Translucent blue */
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.3s ease;
+}
+
+.input-group button:hover {
+  background-color: rgba(0, 255, 89, 0.634); /* Fully opaque on hover */
 }
