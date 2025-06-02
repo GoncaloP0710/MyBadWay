@@ -13,7 +13,6 @@ const nft_dict = {};
 const paymentLoanDropdownDict = {};
 const nftDropdownDict = {};
 const loanCancelDropdownDict = {};
-const loanNFTToAceptDict = {};
 
 async function initializeApp() {
     try {
@@ -22,9 +21,9 @@ async function initializeApp() {
         await fetchAndPopulateNfts();
 
         // Dropdown Menus fetching
-        populatePaymentDropdown();
-        populateNftDropdown();
-        populateLoanCancelDropdownNew();
+        await populatePaymentDropdown();
+        await populateNftDropdown();
+        await populateLoanCancelDropdownNew();
 
         // Fetch initial balances and rates
         getEthBalance();
@@ -321,9 +320,8 @@ async function makeLoanRequestByNft() {
             console.log(`NFT #${nftId} removed from dropdown.`);
         }
 
-        // Optionally, update the `nft_dict` to reflect the change
-        delete nft_dict[nftId];
-        updateNftDictList(); // Refresh the NFT list in the UI
+        updateLoanDictList(); // Refresh the loan list
+        await populateLoanCancelDropdownNew(); // Refresh the loan cancel dropdown
     } catch (error) {
         console.error("Error requesting loan with NFT:", error);
         alert("Error requesting loan with NFT. Check the console for details.");
@@ -366,7 +364,7 @@ async function cancelLoan() {
 
         // Update the UI
         delete loan_dict[selectedLoanId]; // Remove the loan from the dictionary
-        populateLoanDropdown(); // Refresh the dropdown
+        await populateLoanCancelDropdownNew(); // Refresh the dropdown
         updateLoanDictList(); // Refresh the loan list
     } catch (error) {
         console.error("Error canceling loan:", error);
@@ -481,7 +479,7 @@ async function listenToLoanCreation() {
                 console.log("New loan added to loan_dict:", loanId, loan);
 
                 // Update the UI
-                populatePaymentDropdown();
+                await populatePaymentDropdown();
                 updateLoanDictList();
             } catch (error) {
                 console.error("Error fetching loan details for loanId:", loanId, error);
@@ -528,7 +526,7 @@ async function fetchAndPopulateLoans() {
         console.log("Fetched loans:", loan_dict);
 
         // Update the UI
-        populatePaymentDropdown();
+        await populatePaymentDropdown();
         updateLoanDictList();
     } catch (error) {
         console.error("Error fetching loans:", error);
@@ -554,13 +552,13 @@ async function fetchAndPopulateNfts() {
 
         // Update the UI
         updateNftDictList();
-        populateNftDropdown();
+        await populateNftDropdown();
     } catch (error) {
         console.error("Error fetching NFTs:", error);
     }
 }
 
-function populatePaymentDropdown() {
+async function populatePaymentDropdown() {
     const dropdown = document.getElementById("paymentLoanDropdown");
     dropdown.innerHTML = ""; // Clear existing options
     Object.keys(paymentLoanDropdownDict).forEach((key) => delete paymentLoanDropdownDict[key]); // Clear dictionary
@@ -576,7 +574,7 @@ function populatePaymentDropdown() {
     }
 }
 
-function populateNftDropdown() {
+async function populateNftDropdown() {
     const nftDropdown = document.getElementById("nftDropdown");
     nftDropdown.innerHTML = ""; // Clear existing options
     Object.keys(nftDropdownDict).forEach((key) => delete nftDropdownDict[key]); // Clear dictionary
@@ -613,7 +611,7 @@ function populateNftDropdown() {
     }
 }
 
-function populateLoanCancelDropdownNew() {
+async function populateLoanCancelDropdownNew() {
     const loanCancelDropdown = document.getElementById("loanCancelDropdown");
     loanCancelDropdown.innerHTML = ""; // Clear existing options
     Object.keys(loanCancelDropdownDict).forEach((key) => delete loanCancelDropdownDict[key]); // Clear dictionary
