@@ -1,9 +1,9 @@
 const web3_ganache = new Web3(new Web3.providers.WebsocketProvider('ws://127.0.0.1:8545'));
-const defi_contractAddress = "0xC712653BAE432aaf0b1822156B3a15bd7F3Cab44";
+const defi_contractAddress = "0x460D9d4E969e842655Dc409432c0008E1cE69F8D";
 import { defi_abi } from "./abi_decentralized_finance.js";
 const defi_contract = new web3_ganache.eth.Contract(defi_abi, defi_contractAddress);
 
-const nft_contractAddress = "0x67D1Fb8D453514fce4a0DFeBf2cc49df63EbcFc9";
+const nft_contractAddress = "0x75BeE6D52F84f22644eb1377818d67468e2FD330";
 import { nft_abi } from "./abi_nft.js";
 const nft_contract = new web3_ganache.eth.Contract(nft_abi, nft_contractAddress);
 
@@ -671,29 +671,31 @@ async function populateLoanCancelDropdownNew() {
 
 async function populateLoanByNftDropdown() {
     const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
-    const account = accounts[0];
+    const account = accounts[0].toLowerCase();
 
-    const loansNotBorrow = await defi_contract.methods.getAllLoans().call();
-    loansNotBorrow.forEach((loan, index) => {
-        loan_dict[index] = loan;
-    });
+    // Use a função do contrato que retorna apenas os pedidos NFT ainda não financiados
+    const loanRequests = await defi_contract.methods.getLoanRequests().call();
 
     const loanByNftDropdown = document.getElementById("loanByNftDropdown");
     loanByNftDropdown.innerHTML = ""; // Clear existing options
     Object.keys(nftDropdownDict).forEach((key) => delete nftDropdownDict[key]); // Clear dictionary
-    for (const loanNftId in loansNotBorrow) {
-        const loanNft = loansNotBorrow[loanNftId];
-        if (loanNft.isBasedNFT && loanNft.borrower.toLowerCase() !== account) { // Only include loans that are based on NFTs
-            const option = document.createElement("option");
-            option.value = loanNftId;
-            option.textContent = `Loan ID: ${loanNftId} - NFT ID: ${loanNft.nftId} - Amount: ${web3_ganache.utils.fromWei(loanNft.amount, "ether")} ETH`;
+
+    loanRequests.forEach((loan, index) => {
+        // Verifica se o usuário conectado NÃO é o borrower
+        if (
+            loan.isBasedNFT &&
+            loan.borrower &&
+            loan.borrower.toLowerCase() !== account
+        ) {
+            const option = document.createElement("option"); 
+            option.value = index; // Use the index as the value
+            option.textContent = `Loan ID: ${index} - NFT ID: ${loan.nftId} - Amount: ${web3_ganache.utils.fromWei(loan.amount, "ether")} ETH`;
             loanByNftDropdown.appendChild(option);
 
-            // Add to dictionary
-            nftDropdownDict[loanNftId] = `Loan ID: ${loanNftId} - NFT ID: ${loanNft.nftId} - Amount: ${web3_ganache.utils.fromWei(loanNft.amount, "ether")} ETH`;
+            nftDropdownDict[index] = `Loan ID: ${index} - NFT ID: ${loan.nftId} - Amount: ${web3_ganache.utils.fromWei(loan.amount, "ether")} ETH`;
         }
+    });
 
-    }
     if (loanByNftDropdown.options.length === 0) {
         const noLoansOption = document.createElement("option");
         noLoansOption.value = "";

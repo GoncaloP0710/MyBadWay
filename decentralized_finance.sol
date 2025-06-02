@@ -245,10 +245,12 @@ contract DecentralizedFinance is ERC20 {
     }
 
     // TODO: Não sei se podemos fazer isso
-    function getAllLoans() external view returns (Loan[] memory) {
+    function getLoanRequests() external view returns (Loan[] memory) {
         Loan[] memory allLoans = new Loan[](loanCount);
         for (uint256 i = 0; i < loanCount; i++) {
-            allLoans[i] = loans[i];
+            if (loans[i].isBasedNFT == true && loans[i].lender == address(0)) { 
+                allLoans[i] = loans[i];
+            }
         }
         return allLoans;
     }
@@ -296,7 +298,7 @@ contract DecentralizedFinance is ERC20 {
         nftContract.transferFrom(address(this), msg.sender, nftId);
 
         // Perform loan cancellation logic
-        loanCancel.active = false;
+        loanCancel.active = false; // TODO: we dont need ig
         used_nft[nftId] = false;
     }
 
