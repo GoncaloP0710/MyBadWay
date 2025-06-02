@@ -749,7 +749,7 @@ function formatLoanFull(loan) {
         loan.lender,
         loan.borrower,
         loan.active,
-        loan.numPayments,
+        loan.numberOfPayments,
         loan.startTime,
         loan.isBasedNFT,
         loan.nftContract,
