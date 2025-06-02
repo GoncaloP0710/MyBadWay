@@ -247,6 +247,7 @@ contract DecentralizedFinance is ERC20 {
     function makeLoanRequestByNft(IERC721 nftContract, uint256 nftId, uint256 loanAmount, uint256 deadline) external {
         require(loanAmount > 0, "Loan amount must be greater than 0");
         require(nftContract.ownerOf(nftId) == msg.sender, "You do not own this NFT");
+        require(nftContract.getApproved(nftId) == address(this) || nftContract.isApprovedForAll(msg.sender, address(this)),"Contract is not approved to transfer this NFT");
         require(deadline > block.timestamp, "Deadline must be in the future");
         require(deadline <= block.timestamp + maxLoanDuration, "Deadline exceeds max loan duration");
         require(!used_nft[nftId], "Already exists a loan request for this NFT");
@@ -277,16 +278,17 @@ contract DecentralizedFinance is ERC20 {
         uint256 foundLoanId = _findNftLoanId(nftContract, nftId, msg.sender);
         require(foundLoanId != type(uint256).max, "Loan request not found or already funded");
 
-        // Verify that the caller owns the NFT
-        require(nftContract.ownerOf(nftId) == msg.sender, "Caller is not the owner of the NFT");
-
         Loan storage loanCancel = loans[foundLoanId];
-        require(loanCancel.active, "Loan is not active");
+        require(loanCancel.borrower == msg.sender, "Caller is not the owner of the NFT");
+        require(!loanCancel.active, "Loan is already active");
+
+        // Transfer the NFT back to the borrower
+        require(nftContract.ownerOf(nftId) == address(this), "Contract is not the NFT owner");
+        nftContract.transferFrom(address(this), msg.sender, nftId);
 
         // Perform loan cancellation logic
         loanCancel.active = false;
         used_nft[nftId] = false;
-
     }
 
     function loanByNft(IERC721 nftContract, uint256 nftId) external {

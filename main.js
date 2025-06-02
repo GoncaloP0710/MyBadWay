@@ -1,9 +1,9 @@
 const web3_ganache = new Web3(new Web3.providers.WebsocketProvider('ws://127.0.0.1:8545'));
-const defi_contractAddress = "0x0E92bef83070d6d6AC3A55bA9F79D59cC416A434";
+const defi_contractAddress = "0x2AF7FCd56cb45B1104a993C2Fc7Db8b1d9208E36";
 import { defi_abi } from "./abi_decentralized_finance.js";
 const defi_contract = new web3_ganache.eth.Contract(defi_abi, defi_contractAddress);
 
-const nft_contractAddress = "0x3B7793E06eB9BbAea9A35638beEDaE9d72112574";
+const nft_contractAddress = "0x6a3AFca6eB0B83dab8502eC679FEa82D3820BCE2";
 import { nft_abi } from "./abi_nft.js";
 const nft_contract = new web3_ganache.eth.Contract(nft_abi, nft_contractAddress);
 
@@ -288,6 +288,8 @@ async function makeLoanRequestByNft() {
     const loanAmount = prompt("Enter the loan amount (ETH):");
     const deadlineMinutes = prompt("Enter the loan deadline in minutes:");
 
+    await nft_contract.methods.approve(defi_contractAddress, nftId).send({ from: account });
+
     if (!nftId || !loanAmount || !deadlineMinutes || isNaN(loanAmount) || isNaN(deadlineMinutes)) {
         alert("Invalid input. Please provide valid NFT, loan amount, and deadline.");
         return;
@@ -363,7 +365,6 @@ async function cancelLoan() {
         alert("Loan canceled successfully!");
 
         // Update the UI
-        delete loan_dict[selectedLoanId]; // Remove the loan from the dictionary
         await populateLoanCancelDropdownNew(); // Refresh the dropdown
         updateLoanDictList(); // Refresh the loan list
     } catch (error) {
