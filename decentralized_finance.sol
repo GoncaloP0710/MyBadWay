@@ -245,16 +245,26 @@ contract DecentralizedFinance is ERC20 {
     }
 
     // TODO: Não sei se podemos fazer isso
-    function getLoanRequests() external view returns (Loan[] memory) {
-        Loan[] memory allLoans = new Loan[](loanCount);
+    function getLoanRequests() external view returns (uint256[] memory, Loan[] memory) {
+        uint256 count = 0;
         for (uint256 i = 0; i < loanCount; i++) {
-            if (loans[i].isBasedNFT == true && loans[i].lender == address(0)) { 
-                allLoans[i] = loans[i];
+            if (loans[i].isBasedNFT && loans[i].lender == address(0)) {
+                count++;
             }
         }
-        return allLoans;
+        uint256[] memory ids = new uint256[](count);
+        Loan[] memory result = new Loan[](count);
+        uint256 idx = 0;
+        for (uint256 i = 0; i < loanCount; i++) {
+            if (loans[i].isBasedNFT && loans[i].lender == address(0)) {
+                ids[idx] = i;
+                result[idx] = loans[i];
+                idx++;
+            }
+        }
+        return (ids, result);
     }
-
+    
     function makeLoanRequestByNft(IERC721 nftContract, uint256 nftId, uint256 loanAmount, uint256 deadline) external {
         require(loanAmount > 0, "Loan amount must be greater than 0");
         require(nftContract.ownerOf(nftId) == msg.sender, "You do not own this NFT");

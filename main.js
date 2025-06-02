@@ -1,9 +1,9 @@
 const web3_ganache = new Web3(new Web3.providers.WebsocketProvider('ws://127.0.0.1:8545'));
-const defi_contractAddress = "0x460D9d4E969e842655Dc409432c0008E1cE69F8D";
+const defi_contractAddress = "0x62C654120C13822549b0400a7d8DD07C27B2a9A9";
 import { defi_abi } from "./abi_decentralized_finance.js";
 const defi_contract = new web3_ganache.eth.Contract(defi_abi, defi_contractAddress);
 
-const nft_contractAddress = "0x75BeE6D52F84f22644eb1377818d67468e2FD330";
+const nft_contractAddress = "0x7Bdf24AA13FFD1Aa3f456E03F178C0d393f1a0Ab";
 import { nft_abi } from "./abi_nft.js";
 const nft_contract = new web3_ganache.eth.Contract(nft_abi, nft_contractAddress);
 
@@ -674,7 +674,9 @@ async function populateLoanByNftDropdown() {
     const account = accounts[0].toLowerCase();
 
     // Use a função do contrato que retorna apenas os pedidos NFT ainda não financiados
-    const loanRequests = await defi_contract.methods.getLoanRequests().call();
+    const result = await defi_contract.methods.getLoanRequests().call();
+    const ids = result[0];
+    const loanRequests = result[1];
 
     const loanByNftDropdown = document.getElementById("loanByNftDropdown");
     loanByNftDropdown.innerHTML = ""; // Clear existing options
@@ -687,8 +689,9 @@ async function populateLoanByNftDropdown() {
             loan.borrower &&
             loan.borrower.toLowerCase() !== account
         ) {
+            const loanId = ids[index];
             const option = document.createElement("option"); 
-            option.value = index; // Use the index as the value
+            option.value = loanId; // Use the loan ID as the value 
             option.textContent = `Loan ID: ${index} - NFT ID: ${loan.nftId} - Amount: ${web3_ganache.utils.fromWei(loan.amount, "ether")} ETH`;
             loanByNftDropdown.appendChild(option);
 
