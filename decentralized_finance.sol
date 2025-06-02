@@ -376,4 +376,13 @@ contract DecentralizedFinance is ERC20 {
 
         return borrowerLoans;
     }
+
+    function smart_checkLoan() external {
+        require( msg.sender == owner, "Only owner can call this function");
+        for (uint256 i = 0; i < loanCount; i++) {
+            if (loans[i].active) {
+                checkLoan(i);
+            }
+        }
+    }
 }

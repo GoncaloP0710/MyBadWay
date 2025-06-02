@@ -42,6 +42,28 @@ async function initializeApp() {
 // Call the initialization function
 initializeApp();
 
+async function smartCheckLoan() {
+    const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+    const account = accounts[0];
+
+    try {
+        console.log("Calling smart_checkLoan function...");
+        const result = await defi_contract.methods.smart_checkLoan().send({
+            from: account,
+            gas: 3000000, // Adjust gas limit as needed
+        });
+        console.log("smart_checkLoan executed successfully:", result);
+        alert("Smart check loans executed successfully!");
+    } catch (error) {
+        console.error("Error executing smart_checkLoan:", error);
+        alert("Error executing smart check loans. Check the console for details.");
+    }
+}
+
+setInterval(async () => {
+    await smartCheckLoan();
+}, 10 * 60 * 1000);
+
 web3_ganache.currentProvider.on('connect', () => {
     console.log("WebSocket connected");
 });
