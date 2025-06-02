@@ -148,7 +148,9 @@ contract DecentralizedFinance is ERC20 {
         Loan storage loanCheck = loans[loanId];
         // require(loanCheck.amount > 0, "Loan does not exist or has been terminated");
         require(loanCheck.active, "Loan does not exist or has been terminated");
-        require(loanCheck.borrower == msg.sender, "Not the borrower");
+        if (msg.sender != owner) {
+            require(loanCheck.borrower == msg.sender, "Not the borrower");
+        }
 
         // uint256 numberPayments = numberOfPayments[loanId]; // Number of payments made
         uint256 numberPayments = loanCheck.numberOfPayments; // Number of payments made
@@ -384,5 +386,9 @@ contract DecentralizedFinance is ERC20 {
                 checkLoan(i);
             }
         }
+    }
+
+    function isHoe() external view returns (bool) {
+        return msg.sender == owner;
     }
 }

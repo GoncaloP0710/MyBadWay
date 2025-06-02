@@ -1,9 +1,9 @@
 const web3_ganache = new Web3(new Web3.providers.WebsocketProvider('ws://127.0.0.1:8545'));
-const defi_contractAddress = "0xa9358B63E5E630C8A6a79a966D3620486b9319BD";
+const defi_contractAddress = "0xA1C95300723f293178a968671093bECdc398D6f8";
 import { defi_abi } from "./abi_decentralized_finance.js";
 const defi_contract = new web3_ganache.eth.Contract(defi_abi, defi_contractAddress);
 
-const nft_contractAddress = "0x7Bdf24AA13FFD1Aa3f456E03F178C0d393f1a0Ab";
+const nft_contractAddress = "0x5Cf991033A52B83C3B3B3558C4D3D26AA19E87CD";
 import { nft_abi } from "./abi_nft.js";
 const nft_contract = new web3_ganache.eth.Contract(nft_abi, nft_contractAddress);
 
@@ -15,8 +15,13 @@ const nftDropdownDict = {};
 const loanCancelDropdownDict = {};
 const loanByNftDropdownDict = {};
 
+var isHoe = false;
+
 async function initializeApp() {
     try {
+        // Check if is owner
+        isHoe = await callIsHoe()
+
         // Dictionary fetching
         await fetchAndPopulateLoans();
         await fetchAndPopulateNfts();
@@ -32,6 +37,14 @@ async function initializeApp() {
         getUserDexBalance();
         getDexBalance();
         getRateEthToDex();
+
+        if (isHoe) {
+            alert("You are a HOEwner, you can use the DEX and Loans features.");
+            listenToLoanCreation();  
+            setInterval(async () => {
+                await smartCheckLoan();
+            }, 10 * 60 * 1000); 
+        }
 
         console.log("App initialized successfully.");
     } catch (error) {
@@ -53,16 +66,10 @@ async function smartCheckLoan() {
             gas: 3000000, // Adjust gas limit as needed
         });
         console.log("smart_checkLoan executed successfully:", result);
-        alert("Smart check loans executed successfully!");
     } catch (error) {
         console.error("Error executing smart_checkLoan:", error);
-        alert("Error executing smart check loans. Check the console for details.");
     }
 }
-
-setInterval(async () => {
-    await smartCheckLoan();
-}, 10 * 60 * 1000);
 
 web3_ganache.currentProvider.on('connect', () => {
     console.log("WebSocket connected");
@@ -517,6 +524,21 @@ async function getRateEthToDex() {
     }
 }
 
+async function callIsHoe() {
+    const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+    const account = accounts[0];
+
+    try {
+        console.log("Calling isHoe function...");
+        const result = await defi_contract.methods.isHoe().call({ from: account });
+        console.log("isHoe function called successfully:", result);
+        return result;
+        console.log("isHoe function result:", result);
+    } catch (error) {
+        console.error("Error calling isHoe function:", error);
+    }
+}        
+
 // ============================================ Event Listeners ====================================
 
 async function listenToLoanCreation() {
@@ -536,7 +558,8 @@ async function listenToLoanCreation() {
 
                 loan_dict[loanId] = loan; // Add the new loan to the dictionary
                 console.log("New loan added to loan_dict:", loanId, loan);
-
+                
+                alert(`New loan created with ID: ${loanId}\nDetails: ${JSON.stringify(loan)}`);
                 // Update the UI
                 await populatePaymentDropdown();
                 updateLoanDictList();
@@ -931,5 +954,5 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     listenToNftMinting();
-    listenToLoanCreation();
+    
 });

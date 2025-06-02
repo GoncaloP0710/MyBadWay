@@ -683,6 +683,19 @@ export const defi_abi = [
 		"type": "function"
 	},
 	{
+		"inputs": [],
+		"name": "isHoe",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
 		"inputs": [
 			{
 				"internalType": "uint256",
@@ -929,6 +942,13 @@ export const defi_abi = [
 			}
 		],
 		"name": "setDexSwapRate",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "smart_checkLoan",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
