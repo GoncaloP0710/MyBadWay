@@ -1,5 +1,5 @@
 const web3_ganache = new Web3(new Web3.providers.WebsocketProvider('ws://127.0.0.1:8545'));
-const defi_contractAddress = "0x5cecdfe3Bd55B0A4481f0f34F3F03E9C29A3217A";
+const defi_contractAddress = "0xa9358B63E5E630C8A6a79a966D3620486b9319BD";
 import { defi_abi } from "./abi_decentralized_finance.js";
 const defi_contract = new web3_ganache.eth.Contract(defi_abi, defi_contractAddress);
 

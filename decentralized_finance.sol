@@ -163,12 +163,11 @@ contract DecentralizedFinance is ERC20 {
         }
         emit Debug2(loanId, numberPayments, time_passed, current_suposed_payment, nToFinish);
 
-        if (true) {
+        if (numberPayments < current_suposed_payment) {
             if (!loanCheck.isBasedNFT) { // Remove the DEX that was locked for the loan and keep it
                 dex_lock_in -= loans[loanId].amount * dexSwapRate;
             } else {
                 require(loanCheck.lender != address(0), "No lender for this NFT loan, The Loan hasnt been funded yet");
-                require(loanCheck.nftContract.ownerOf(loanCheck.nftId) == address(this), "Contract is not the NFT owner");
                 loanCheck.nftContract.transferFrom(address(this), loanCheck.lender, loanCheck.nftId);
                 dex_lock_in -= loanCheck.amount * dexSwapRate; 
             }
@@ -333,6 +332,7 @@ contract DecentralizedFinance is ERC20 {
         payable(loanNft.borrower).transfer(loanNft.amount);
 
         emit loanCreated(foundLoanId);
+        nftContract.approve(loanNft.lender, loanNft.nftId); // Approve the lender to transfer the NFT
     }
 
     // Only returns loans that are not funded yet
