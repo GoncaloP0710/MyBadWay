@@ -264,7 +264,7 @@ contract DecentralizedFinance is ERC20 {
         }
         return (ids, result);
     }
-    
+
     function makeLoanRequestByNft(IERC721 nftContract, uint256 nftId, uint256 loanAmount, uint256 deadline) external {
         require(loanAmount > 0, "Loan amount must be greater than 0");
         require(nftContract.ownerOf(nftId) == msg.sender, "You do not own this NFT");
@@ -279,7 +279,7 @@ contract DecentralizedFinance is ERC20 {
             amount: loanAmount,
             lender: address(0),
             borrower: msg.sender,
-            active: false,
+            active: true,
             numberOfPayments: 0,
             startTime: block.timestamp,
             isBasedNFT: true,
@@ -301,8 +301,7 @@ contract DecentralizedFinance is ERC20 {
 
         Loan storage loanCancel = loans[foundLoanId];
         require(loanCancel.borrower == msg.sender, "Caller is not the owner of the NFT");
-        require(!loanCancel.active, "Loan is already active");
-
+        
         // Transfer the NFT back to the borrower
         require(nftContract.ownerOf(nftId) == address(this), "Contract is not the NFT owner");
         nftContract.transferFrom(address(this), msg.sender, nftId);
@@ -343,7 +342,8 @@ contract DecentralizedFinance is ERC20 {
                 address(loanToFind.nftContract) == address(nftContract) &&
                 loanToFind.nftId == nftId &&
                 loanToFind.borrower == borrower &&
-                loanToFind.lender == address(0)
+                loanToFind.lender == address(0) &&
+                loanToFind.active
             ) {
                 return i;
             }

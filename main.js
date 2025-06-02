@@ -1,5 +1,5 @@
 const web3_ganache = new Web3(new Web3.providers.WebsocketProvider('ws://127.0.0.1:8545'));
-const defi_contractAddress = "0x62C654120C13822549b0400a7d8DD07C27B2a9A9";
+const defi_contractAddress = "0x8a632adfc75571b5A8b28e2F9827abfcca368243";
 import { defi_abi } from "./abi_decentralized_finance.js";
 const defi_contract = new web3_ganache.eth.Contract(defi_abi, defi_contractAddress);
 
@@ -650,7 +650,7 @@ async function populateLoanCancelDropdownNew() {
 
     for (const loanCancelId in loan_dict) {
         const loanCancel = loan_dict[loanCancelId];
-        if (loanCancel.isBasedNFT) { // Only include loans that are based on NFTs
+        if (loanCancel.isBasedNFT && loanCancel.active) { // Only include loans that are based on NFTs
             const option = document.createElement("option");
             option.value = loanCancelId;
             option.textContent = `Loan ID: ${loanCancelId} - NFT ID: ${loanCancel.nftId}`;
@@ -687,7 +687,8 @@ async function populateLoanByNftDropdown() {
         if (
             loan.isBasedNFT &&
             loan.borrower &&
-            loan.borrower.toLowerCase() !== account
+            loan.borrower.toLowerCase() !== account &&
+            loan.active 
         ) {
             const loanId = ids[index];
             const option = document.createElement("option"); 
