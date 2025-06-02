@@ -1,9 +1,9 @@
 const web3_ganache = new Web3(new Web3.providers.WebsocketProvider('ws://127.0.0.1:8545'));
-const defi_contractAddress = "0x2AF7FCd56cb45B1104a993C2Fc7Db8b1d9208E36";
+const defi_contractAddress = "0xC712653BAE432aaf0b1822156B3a15bd7F3Cab44";
 import { defi_abi } from "./abi_decentralized_finance.js";
 const defi_contract = new web3_ganache.eth.Contract(defi_abi, defi_contractAddress);
 
-const nft_contractAddress = "0x6a3AFca6eB0B83dab8502eC679FEa82D3820BCE2";
+const nft_contractAddress = "0x67D1Fb8D453514fce4a0DFeBf2cc49df63EbcFc9";
 import { nft_abi } from "./abi_nft.js";
 const nft_contract = new web3_ganache.eth.Contract(nft_abi, nft_contractAddress);
 
@@ -24,6 +24,7 @@ async function initializeApp() {
         await populatePaymentDropdown();
         await populateNftDropdown();
         await populateLoanCancelDropdownNew();
+        await populateLoanByNftDropdown();
 
         // Fetch initial balances and rates
         getEthBalance();
@@ -373,8 +374,38 @@ async function cancelLoan() {
     }
 }
 
-async function loanByNft() {
-    // TODO: implement this
+async function loanByNft(loanId) {
+    const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+    const account = accounts[0];
+
+    if (!loanId || !loan_dict[loanId] || !loan_dict[loanId].isBasedNFT) {
+        alert("Invalid loan selected.");
+        return;
+    }
+
+    const loan = loan_dict[loanId];
+    const nftContractAddress = loan.nftContract;
+    const nftId = loan.nftId;
+
+    try {
+        console.log("Requesting loan by NFT for account:", account, "with NFT ID:", nftId);
+        const result = await defi_contract.methods.loanByNft(nftContractAddress, nftId).send({
+            from: account,
+            gas: 3000000, // Adjust gas limit as needed
+        });
+
+        console.log("Loan by NFT requested successfully:", result);
+        alert("Loan by NFT requested successfully!");
+
+        // Update the UI
+        updateLoanDictList(); // Refresh the loan list
+        await populateLoanCancelDropdownNew(); // Refresh the loan cancel dropdown
+    } catch (error) {
+        console.error("Error requesting loan by NFT:", error);
+        alert("Error requesting loan by NFT. Check the console for details.");
+    }
+    
+
 }
 
 async function mintNFT() {
@@ -638,6 +669,39 @@ async function populateLoanCancelDropdownNew() {
     }
 }
 
+async function populateLoanByNftDropdown() {
+    const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+    const account = accounts[0];
+
+    const loansNotBorrow = await defi_contract.methods.getAllLoans().call();
+    loansNotBorrow.forEach((loan, index) => {
+        loan_dict[index] = loan;
+    });
+
+    const loanByNftDropdown = document.getElementById("loanByNftDropdown");
+    loanByNftDropdown.innerHTML = ""; // Clear existing options
+    Object.keys(nftDropdownDict).forEach((key) => delete nftDropdownDict[key]); // Clear dictionary
+    for (const loanNftId in loansNotBorrow) {
+        const loanNft = loansNotBorrow[loanNftId];
+        if (loanNft.isBasedNFT && loanNft.borrower.toLowerCase() !== account) { // Only include loans that are based on NFTs
+            const option = document.createElement("option");
+            option.value = loanNftId;
+            option.textContent = `Loan ID: ${loanNftId} - NFT ID: ${loanNft.nftId} - Amount: ${web3_ganache.utils.fromWei(loanNft.amount, "ether")} ETH`;
+            loanByNftDropdown.appendChild(option);
+
+            // Add to dictionary
+            nftDropdownDict[loanNftId] = `Loan ID: ${loanNftId} - NFT ID: ${loanNft.nftId} - Amount: ${web3_ganache.utils.fromWei(loanNft.amount, "ether")} ETH`;
+        }
+
+    }
+    if (loanByNftDropdown.options.length === 0) {
+        const noLoansOption = document.createElement("option");
+        noLoansOption.value = "";
+        noLoansOption.textContent = "No Requests available";
+        loanByNftDropdown.appendChild(noLoansOption);
+    }
+}
+
 function updateLoanDictList() {
     const loanDictList = document.getElementById("loanDictList");
     loanDictList.innerHTML = ""; // Clear the list
@@ -812,6 +876,22 @@ document.addEventListener("DOMContentLoaded", () => {
             await cancelLoan(selectedLoanId);
         } catch (error) {
             console.error("Error canceling loan:", error);
+        }
+    };
+
+    // Loan by NFT Button
+    document.getElementById("loanByNftNewBtn").onclick = async () => {
+        const loanByNftDropdown = document.getElementById("loanByNftDropdown");
+        const selectedLoanId = loanByNftDropdown.value;
+        if (!selectedLoanId) {
+            alert("Please select a loan to request by NFT.");
+            return;
+        }
+
+        try {
+            await loanByNft(selectedLoanId);
+        } catch (error) {
+            console.error("Error requesting loan by NFT:", error);
         }
     };
 

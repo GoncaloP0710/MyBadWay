@@ -244,6 +244,15 @@ contract DecentralizedFinance is ERC20 {
         return dexSwapRate;
     }
 
+    // TODO: Não sei se podemos fazer isso
+    function getAllLoans() external view returns (Loan[] memory) {
+        Loan[] memory allLoans = new Loan[](loanCount);
+        for (uint256 i = 0; i < loanCount; i++) {
+            allLoans[i] = loans[i];
+        }
+        return allLoans;
+    }
+
     function makeLoanRequestByNft(IERC721 nftContract, uint256 nftId, uint256 loanAmount, uint256 deadline) external {
         require(loanAmount > 0, "Loan amount must be greater than 0");
         require(nftContract.ownerOf(nftId) == msg.sender, "You do not own this NFT");
@@ -303,7 +312,7 @@ contract DecentralizedFinance is ERC20 {
         // Transfere DEX do lender para o contrato
         _transfer(msg.sender, address(this), dexToLock);
         loanNft.lender = msg.sender;
-        loanNft.active = true; 
+        loanNft.active = true;
         dex_lock_in += dexToLock;
 
         // Envia ETH para o tomador do empréstimo
