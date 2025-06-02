@@ -175,10 +175,13 @@ contract DecentralizedFinance is ERC20 {
             loanCheck.amount = 0; // Terminate the loan
             return false;
         } else if (numberPayments == nToFinish) {
+            if (loanCheck.isBasedNFT) { // Remove the DEX that was locked for the loan and return it to the borrower
+                require(loanCheck.lender != address(0), "No lender for this NFT loan, The Loan hasnt been funded yet");
+                loanCheck.nftContract.transferFrom(address(this), loanCheck.borrower, loanCheck.nftId);
+            }
             uint256 dexLocked = loanCheck.amount * dexSwapRate;
             _transfer(address(this), msg.sender, dexLocked); // Return the DEX locked for the loan
             dex_lock_in -= dexLocked; // Remove the DEX that was locked for the loan
-            // loanCheck.amount = 0; // Terminate the loan
             loanCheck.active = false; // Mark the loan as inactive
             return false;
         }
@@ -296,12 +299,12 @@ contract DecentralizedFinance is ERC20 {
     }
 
     function cancelLoanRequestByNft(IERC721 nftContract, uint256 nftId) external {
-        uint256 foundLoanId = _findNftLoanId(nftContract, nftId, msg.sender);
+        uint256 foundLoanId = _findNftLoanId(nftContract, nftId);
         require(foundLoanId != type(uint256).max, "Loan request not found or already funded");
 
         Loan storage loanCancel = loans[foundLoanId];
         require(loanCancel.borrower == msg.sender, "Caller is not the owner of the NFT");
-        
+
         // Transfer the NFT back to the borrower
         require(nftContract.ownerOf(nftId) == address(this), "Contract is not the NFT owner");
         nftContract.transferFrom(address(this), msg.sender, nftId);
@@ -312,7 +315,7 @@ contract DecentralizedFinance is ERC20 {
     }
 
     function loanByNft(IERC721 nftContract, uint256 nftId) external {
-        uint256 foundLoanId = _findNftLoanId(nftContract, nftId, msg.sender);
+        uint256 foundLoanId = _findNftLoanId(nftContract, nftId);
         require(foundLoanId != type(uint256).max, "Loan request not found or already funded");
 
         Loan storage loanNft = loans[foundLoanId];
@@ -323,25 +326,22 @@ contract DecentralizedFinance is ERC20 {
         // Transfere DEX do lender para o contrato
         _transfer(msg.sender, address(this), dexToLock);
         loanNft.lender = msg.sender;
-        loanNft.active = true;
         dex_lock_in += dexToLock;
 
         // Envia ETH para o tomador do empréstimo
         payable(loanNft.borrower).transfer(loanNft.amount);
-        loanNft.nftContract.transferFrom(address(this), msg.sender, loanNft.nftId); // Transfer NFT to the lender
 
         emit loanCreated(foundLoanId);
     }
 
     // Only returns loans that are not funded yet
-    function _findNftLoanId(IERC721 nftContract, uint256 nftId, address borrower) internal view returns (uint256) {
+    function _findNftLoanId(IERC721 nftContract, uint256 nftId) internal view returns (uint256) {
         for (uint256 i = 0; i < loanCount; i++) {
             Loan storage loanToFind = loans[i];
             if (
                 loanToFind.isBasedNFT &&
                 address(loanToFind.nftContract) == address(nftContract) &&
                 loanToFind.nftId == nftId &&
-                loanToFind.borrower == borrower &&
                 loanToFind.lender == address(0) &&
                 loanToFind.active
             ) {

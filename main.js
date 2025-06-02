@@ -1,5 +1,5 @@
 const web3_ganache = new Web3(new Web3.providers.WebsocketProvider('ws://127.0.0.1:8545'));
-const defi_contractAddress = "0x8a632adfc75571b5A8b28e2F9827abfcca368243";
+const defi_contractAddress = "0xEe511f0c1baB2e4bb81E1e6C07AE79a7A8D52653";
 import { defi_abi } from "./abi_decentralized_finance.js";
 const defi_contract = new web3_ganache.eth.Contract(defi_abi, defi_contractAddress);
 
@@ -13,6 +13,7 @@ const nft_dict = {};
 const paymentLoanDropdownDict = {};
 const nftDropdownDict = {};
 const loanCancelDropdownDict = {};
+const loanByNftDropdownDict = {};
 
 async function initializeApp() {
     try {
@@ -378,12 +379,16 @@ async function loanByNft(loanId) {
     const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
     const account = accounts[0];
 
-    if (!loanId || !loan_dict[loanId] || !loan_dict[loanId].isBasedNFT) {
+    console.log("loanByNft function called with loanId:", loanId);
+    console.log("Account:", !loanByNftDropdownDict[loanId]);
+    console.log("Loan Dictionary:", loanByNftDropdownDict);
+
+    if (!loanId || !loanByNftDropdownDict[loanId]) {
         alert("Invalid loan selected.");
         return;
     }
 
-    const loan = loan_dict[loanId];
+    const loan = loanByNftDropdownDict[loanId];
     const nftContractAddress = loan.nftContract;
     const nftId = loan.nftId;
 
@@ -695,6 +700,7 @@ async function populateLoanByNftDropdown() {
             option.value = loanId; // Use the loan ID as the value 
             option.textContent = `Loan ID: ${index} - NFT ID: ${loan.nftId} - Amount: ${web3_ganache.utils.fromWei(loan.amount, "ether")} ETH`;
             loanByNftDropdown.appendChild(option);
+            loanByNftDropdownDict[loanId] = loan; 
 
             nftDropdownDict[index] = `Loan ID: ${index} - NFT ID: ${loan.nftId} - Amount: ${web3_ganache.utils.fromWei(loan.amount, "ether")} ETH`;
         }
@@ -706,6 +712,7 @@ async function populateLoanByNftDropdown() {
         noLoansOption.textContent = "No Requests available";
         loanByNftDropdown.appendChild(noLoansOption);
     }
+
 }
 
 function updateLoanDictList() {
