@@ -9,12 +9,21 @@ body {
   color: white; /* Set default text color to white */
 }
 
-/* Header styling */
+/* Styling for the header */
 header {
+  display: flex; /* Use flexbox for layout */
+  align-items: center; /* Vertically align items */
+  justify-content: flex-start; /* Align items to the left */
   background-color: rgba(0, 0, 0, 0.385); /* Translucent black */
   color: white;
   padding: 1rem;
-  text-align: center;
+}
+
+/* Styling for the logo in the header */
+header .logo {
+  height: 60px; /* Adjust the height of the logo */
+  margin-right: 650px; /* Add some space between the logo and the title */
+  vertical-align: middle; /* Align the logo with the text */
 }
 
 /* Grid container for layout */
@@ -29,7 +38,7 @@ header {
 
 /* Translucent containers for dictionaries and controls */
 .dict-box, .balances, .controls .section {
-  background-color: rgba(32, 32, 32, 0.4); /* Translucent dark background */
+  background-color: rgba(2, 14, 8, 0.752); /* Translucent dark background */
   padding: 20px; /* Increased padding inside the containers */
   border-radius: 8px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.9); /* Subtle shadow for depth */
@@ -88,7 +97,7 @@ header {
 
 /* Titles styling */
 header h1, .balances h2, .controls .section h2, .dict-box h2 {
-  color: #22f46bb9; /* Gold color for titles */
+  color: #22f46b; /* Gold color for titles */
   margin-bottom: 10px;
 }
 
