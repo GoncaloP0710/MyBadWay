@@ -1,5 +1,5 @@
 const web3_ganache = new Web3(new Web3.providers.WebsocketProvider('ws://127.0.0.1:8545'));
-const defi_contractAddress = "0x930146EA22Dc66d87ef933860A79c981D64d8B85";
+const defi_contractAddress = "0xB5E231B92BDbb11950570AEc2B632d6FF0aecA55";
 import { defi_abi } from "./abi_decentralized_finance.js";
 const defi_contract = new web3_ganache.eth.Contract(defi_abi, defi_contractAddress);
 
@@ -237,7 +237,7 @@ async function checkLoanStatus(loan) {
     }
 }  
 
-async function makePayment(loanId, paymentAmount) {
+async function makePayment(loanId) {
     const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
     const account = accounts[0];
 
@@ -247,10 +247,11 @@ async function makePayment(loanId, paymentAmount) {
     }
 
     const amount = await getPaymentAmount(loanId);
+    alert(`Payment amount for loan ID ${loanId} is ${amount} ETH. Proceeding with payment...`);
     console.log("Payment amount fetched:", amount);
 
     try {
-        console.log("Making payment for loan:", paymentLoanDropdownDict[loanId], "with amount:", paymentAmount);
+        console.log("Making payment for loan:", paymentLoanDropdownDict[loanId], "with amount:", amount);
         const paymentResult = await defi_contract.methods.makePayment(loanId).send({
             from: account,
             value: web3_ganache.utils.toWei(amount.toString(), "ether"),
@@ -941,13 +942,12 @@ document.addEventListener("DOMContentLoaded", () => {
     // Make Payment Button
     document.getElementById("makePaymentBtn").onclick = async () => {
         const loanKey = document.getElementById("paymentLoanDropdown").value;
-        const paymentAmount = parseFloat(document.getElementById("paymentAmountInput").value);
-        if (!loanKey || isNaN(paymentAmount) || paymentAmount <= 0) {
+        if (!loanKey) {
             alert("Please select a valid loan and enter a valid payment amount.");
             return;
         }
         try {
-            await makePayment(loanKey, paymentAmount);
+            await makePayment(loanKey);
             alert("Payment successful!");
         } catch (error) {
             alert("Error making payment. Check the console for details.");

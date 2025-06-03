@@ -52,7 +52,7 @@ contract DecentralizedFinance is ERC20 {
         periodicity = _periodicity * 1 days;
         interest = _interest;
         termination = _termination;
-        maxLoanDuration = 2 years;
+        maxLoanDuration = 5 * 365 days;
         loanCount = 0;
     }
 
@@ -117,11 +117,8 @@ contract DecentralizedFinance is ERC20 {
 
         if (checked) {
             uint256 payment_amount = getPaymentAmount(loanId);
-            require(msg.value >= payment_amount, "Insufficient payment amount");
+            require(msg.value == payment_amount, "Wrong payment amount");
             loanPayment.numberOfPayments += 1; 
-            if (msg.value > interestPayment) { // Return the excess amount to the sender
-                payable(msg.sender).transfer(msg.value - interestPayment);
-            }
             if (loanPayment.isBasedNFT) { // Foward the payment to the lender and transfer the NFT back to the borrower
                 require(loanPayment.lender != address(0), "No lender for this NFT loan, The Loan hasnt been funded yet");
                 payable(loanPayment.lender).transfer(payment_amount); // Transfer the payment to the lender
@@ -300,21 +297,8 @@ contract DecentralizedFinance is ERC20 {
     function sumETHamounts() external view returns (uint256) {
         uint256 total = 0;
         for (uint256 i = 0; i < loanCount; i++) {
-            Loan storage loanETH = loans[i];
-            if (loanETH.active && loanETH.borrower == msg.sender) {
-                uint256 paymentsDue = (loanETH.deadline - loanETH.startTime) / periodicity;
-                if (periodicity == 0 || duration == 0) { // TODO: idk
-                    continue; // Skip to avoid division by zero
-                }
-                if ((loanETH.deadline - loanETH.startTime) < periodicity) {
-                    paymentsDue = 1;
-                }
-                uint256 paid = 0;
-                if (paymentsDue > 0) {
-                    paid = (loanETH.amount * loanETH.numberOfPayments) / paymentsDue;
-                }
-                uint256 remaining = loanETH.amount > paid ? loanETH.amount - paid : 0;
-                total += remaining;
+            if (loans[i].active) {
+                total += loans[i].amount;
             }
         }
         return total;
@@ -397,16 +381,23 @@ contract DecentralizedFinance is ERC20 {
         return borrowerLoans;
     }
 
-    function getPaymentAmount (uint256 loanId) external view returns (uint256) {
+    function getPaymentAmount (uint256 loanId) public view returns (uint256) {
         Loan storage loanPayment = loans[loanId];
         require(loanPayment.active, "Loan does not exist or has been terminated");
+        if (loanPayment.isBasedNFT) {
+            require(loanPayment.lender != address(0), "No lender for this NFT loan, The Loan hasnt been funded yet");
+        }
 
         uint256 time = loanPayment.deadline - loanPayment.startTime; 
         uint256 duration = time * 1e18 / (365 * 24 * 60 * 60); 
         uint256 interestPayment = (loanPayment.amount * interest * duration) / (100 * 1e18); 
 
-        uint256 amount_of_payments = (loanPayment.deadline - loanPayment.startTime) / periodicity; 
-        uint256 normalized_payment = loanPayment.amount / amount_of_payments;
+        uint256 normalized_payment = 0;
+        uint256 nToFinish = (loanPayment.deadline - loanPayment.startTime) / periodicity; // Number of payments to finish the loan
+        
+        if (loanPayment.numberOfPayments == (nToFinish - 1)) {
+            normalized_payment = loanPayment.amount; 
+        }
         return interestPayment + normalized_payment; // Return the total payment amount including interest
     }
 
