@@ -101,9 +101,6 @@ contract DecentralizedFinance is ERC20 {
         return loanId;
     }
 
-    // Declare event at contract level
-    event Debug(uint256 duration, uint256 interestPayment, uint256 value, uint256 time);
-
     function makePayment(uint256 loanId) external payable {
         Loan storage loanPayment = loans[loanId];
         bool checked = checkLoan(loanId);
@@ -127,11 +124,8 @@ contract DecentralizedFinance is ERC20 {
         checked = checkLoan(loanId);
     }
 
-    event Debug2(uint256 loanId, uint256 numberPayments, uint256 timePassed, uint256 currentSupposedPayment, uint256 finished);
-
     function checkLoan(uint256 loanId) public returns (bool) {
         Loan storage loanCheck = loans[loanId];
-        // require(loanCheck.amount > 0, "Loan does not exist or has been terminated");
         require(loanCheck.active, "Loan does not exist or has been terminated");
         if (msg.sender != owner) {
             require(loanCheck.borrower == msg.sender, "Not the borrower");
@@ -140,13 +134,10 @@ contract DecentralizedFinance is ERC20 {
         uint256 numberPayments = loanCheck.numberOfPayments; // Number of payments made
         uint256 time_passed = block.timestamp - loanCheck.startTime; // Time passed since the loan was created
         uint256 current_suposed_payment = (time_passed / periodicity); // Calculate the current supposed payment based on the periodicity and time passed 
-
-        uint256 full_time = loanCheck.deadline - loanCheck.startTime; // Total time of the loan
         uint256 nToFinish = (loanCheck.deadline - loanCheck.startTime) / periodicity; 
         if ((loanCheck.deadline - loanCheck.startTime) < periodicity) {
             nToFinish = 1; 
         }
-        emit Debug2(loanId, numberPayments, time_passed, current_suposed_payment, nToFinish);
 
         if (numberPayments < current_suposed_payment) {
             if (!loanCheck.isBasedNFT) { // Remove the DEX that was locked for the loan and keep it
@@ -190,15 +181,10 @@ contract DecentralizedFinance is ERC20 {
         require(msg.value >= total, "Insufficient repayment amount including fee");
 
         uint256 dexLocked = activeLoan.amount * dexSwapRate;
-        // activeLoan.amount = 0;
         activeLoan.active = false; // Mark the loan as inactive
-
         _transfer(address(this), msg.sender, dexLocked);
-
         dex_lock_in -= dexLocked; // Remove the DEX that was locked for the loan
-
-        // Refund the extra value
-        if (msg.value > total) {
+        if (msg.value > total) { // Refund the extra value
             payable(msg.sender).transfer(msg.value - total);
         }
     }    

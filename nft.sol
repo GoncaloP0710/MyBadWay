@@ -27,12 +27,6 @@ contract SimpleNFT is ERC721URIStorage, Ownable {
         emit NftMinted(address(this), tokenId);
     }
 
-    // Example function to interact with IERC721
-    function getOwnerOfToken(address nftContractAddress, uint256 tokenId) external view returns (address) {
-        IERC721 nft = IERC721(nftContractAddress); // Cast address to IERC721
-        return nft.ownerOf(tokenId); // Call IERC721 function
-    }
-
     function getNftsByOwner() external view returns (uint256[] memory) {
         uint256 totalTokens = tokenIdCounter.current();
         uint256 count = 0;
