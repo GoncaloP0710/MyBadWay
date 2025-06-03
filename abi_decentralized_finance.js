@@ -590,6 +590,11 @@ export const defi_abi = [
 		"name": "getLoansByBorrower",
 		"outputs": [
 			{
+				"internalType": "uint256[]",
+				"name": "",
+				"type": "uint256[]"
+			},
+			{
 				"components": [
 					{
 						"internalType": "uint256",

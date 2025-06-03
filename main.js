@@ -1,5 +1,5 @@
 const web3_ganache = new Web3(new Web3.providers.WebsocketProvider('ws://127.0.0.1:8545'));
-const defi_contractAddress = "0xB5E231B92BDbb11950570AEc2B632d6FF0aecA55";
+const defi_contractAddress = "0x760bE15afb1CCA0c4F02Aa02a5840b6a708dA31e";
 import { defi_abi } from "./abi_decentralized_finance.js";
 const defi_contract = new web3_ganache.eth.Contract(defi_abi, defi_contractAddress);
 
@@ -321,17 +321,17 @@ async function makeLoanRequestByNft() {
     const nftDropdown = document.getElementById("nftDropdown");
     const nftId = nftDropdown.value;
     const loanAmount = prompt("Enter the loan amount (ETH):");
-    const deadlineMinutes = prompt("Enter the loan deadline in minutes:");
+    const deadlineYears = prompt("Enter the loan deadline in years:");
 
     await nft_contract.methods.approve(defi_contractAddress, nftId).send({ from: account });
 
-    if (!nftId || !loanAmount || !deadlineMinutes || isNaN(loanAmount) || isNaN(deadlineMinutes)) {
+    if (!nftId || !loanAmount || !deadlineYears || isNaN(loanAmount) || isNaN(deadlineYears)) {
         alert("Invalid input. Please provide valid NFT, loan amount, and deadline.");
         return;
     }
 
     const now = Math.floor(Date.now() / 1000);
-    const deadline = now + (parseInt(deadlineMinutes) * 60);
+    const deadline = now + (parseInt(deadlineYears) * 365 * 24 * 60 * 60); // Convert years to seconds
 
     try {
         console.log("Requesting loan with NFT:", nftId, "Loan amount:", loanAmount, "Deadline:", deadline);
@@ -651,11 +651,14 @@ async function fetchAndPopulateLoans() {
         console.log("Fetching loans for account:", account);
 
         // Call the contract function to get all loans for the user
-        const loans = await defi_contract.methods.getLoansByBorrower().call({ from: account });
+        const result = await defi_contract.methods.getLoansByBorrower().call({ from: account });
+        const ids = result[0];
+        const loans = result[1];
 
         // Populate the loan_dict with the fetched loans
         loans.forEach((loan, index) => {
-            loan_dict[index] = loan; // Use the index as the key
+            const loanId = ids[index];
+            loan_dict[loanId] = loan; // Use the real loan ID as the key
         });
 
         console.log("Fetched loans:", loan_dict);
@@ -778,6 +781,7 @@ async function populateLoanByNftDropdown() {
 
     // Use a função do contrato que retorna apenas os pedidos NFT ainda não financiados
     const result = await defi_contract.methods.getLoanRequests().call();
+    console.log("Loan requests fetched:", result);
     const ids = result[0];
     const loanRequests = result[1];
 
@@ -796,11 +800,11 @@ async function populateLoanByNftDropdown() {
             const loanId = ids[index];
             const option = document.createElement("option"); 
             option.value = loanId; // Use the loan ID as the value 
-            option.textContent = `Loan ID: ${index} - NFT ID: ${loan.nftId} - Amount: ${web3_ganache.utils.fromWei(loan.amount, "ether")} ETH`;
+            option.textContent = `Loan ID: ${loanId} - NFT ID: ${loan.nftId} - Amount: ${web3_ganache.utils.fromWei(loan.amount, "ether")} ETH`;
             loanByNftDropdown.appendChild(option);
             loanByNftDropdownDict[loanId] = loan; 
 
-            nftDropdownDict[index] = `Loan ID: ${index} - NFT ID: ${loan.nftId} - Amount: ${web3_ganache.utils.fromWei(loan.amount, "ether")} ETH`;
+            nftDropdownDict[index] = `Loan ID: ${loanId} - NFT ID: ${loan.nftId} - Amount: ${web3_ganache.utils.fromWei(loan.amount, "ether")} ETH`;
         }
     });
 

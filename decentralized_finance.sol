@@ -49,7 +49,7 @@ contract DecentralizedFinance is ERC20 {
         _mint(address(this), 10**24);
         owner = msg.sender;   
         dexSwapRate = _rate;
-        periodicity = _periodicity * 1 days;
+        periodicity = _periodicity * 60; // Convert periodicity to seconds (assuming input is in minutes)
         interest = _interest;
         termination = _termination;
         maxLoanDuration = 5 * 365 days;
@@ -160,12 +160,15 @@ contract DecentralizedFinance is ERC20 {
             loanCheck.active = false; // Mark the loan as inactive
             return false;
         } else if (numberPayments == nToFinish) {
+            uint256 dexLocked = loanCheck.amount * dexSwapRate;
             if (loanCheck.isBasedNFT) { // Remove the DEX that was locked for the loan and return it to the borrower
                 require(loanCheck.lender != address(0), "No lender for this NFT loan, The Loan hasnt been funded yet");
                 loanCheck.nftContract.transferFrom(address(this), loanCheck.borrower, loanCheck.nftId);
+                used_nft[loanCheck.nftId] = false; // Mark the NFT as not used
+                _transfer(address(this), loanCheck.lender, dexLocked);  // Return the DEX locked for the loan to the lender
+            } else {
+                _transfer(address(this), msg.sender, dexLocked); // Return the DEX locked for the loan
             }
-            uint256 dexLocked = loanCheck.amount * dexSwapRate;
-            _transfer(address(this), msg.sender, dexLocked); // Return the DEX locked for the loan
             dex_lock_in -= dexLocked; // Remove the DEX that was locked for the loan
             loanCheck.active = false; // Mark the loan as inactive
             return false;
@@ -356,7 +359,7 @@ contract DecentralizedFinance is ERC20 {
         return (ids, result);
     }
 
-    function getLoansByBorrower() external view returns (Loan[] memory) {
+    function getLoansByBorrower() external view returns (uint256[] memory, Loan[] memory) {
         uint256 count = 0;
 
         // First, count how many loans belong to the borrower
@@ -366,21 +369,23 @@ contract DecentralizedFinance is ERC20 {
             }
         }
 
-        // Create an array to store the loans
+        // Create arrays to store the loan IDs and the loans
+        uint256[] memory ids = new uint256[](count);
         Loan[] memory borrowerLoans = new Loan[](count);
         uint256 index = 0;
 
-        // Populate the array with the borrower's loans
+        // Populate the arrays with the borrower's loan IDs and loans
         for (uint256 i = 0; i < loanCount; i++) {
             if (loans[i].borrower == msg.sender) {
+                ids[index] = i;
                 borrowerLoans[index] = loans[i];
                 index++;
             }
         }
 
-        return borrowerLoans;
+        return (ids, borrowerLoans);
     }
-
+    
     function getPaymentAmount (uint256 loanId) public view returns (uint256) {
         Loan storage loanPayment = loans[loanId];
         require(loanPayment.active, "Loan does not exist or has been terminated");
