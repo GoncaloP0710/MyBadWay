@@ -1,9 +1,9 @@
 const web3_ganache = new Web3(new Web3.providers.WebsocketProvider('ws://127.0.0.1:8545'));
-const defi_contractAddress = "0xA1C95300723f293178a968671093bECdc398D6f8";
+const defi_contractAddress = "0x930146EA22Dc66d87ef933860A79c981D64d8B85";
 import { defi_abi } from "./abi_decentralized_finance.js";
 const defi_contract = new web3_ganache.eth.Contract(defi_abi, defi_contractAddress);
 
-const nft_contractAddress = "0x5Cf991033A52B83C3B3B3558C4D3D26AA19E87CD";
+const nft_contractAddress = "0x433345c729470267f1d45775259Eb5C9f2996c1f";
 import { nft_abi } from "./abi_nft.js";
 const nft_contract = new web3_ganache.eth.Contract(nft_abi, nft_contractAddress);
 
@@ -37,10 +37,10 @@ async function initializeApp() {
         getUserDexBalance();
         getDexBalance();
         getRateEthToDex();
+        getTokensToPay();
 
         if (isHoe) {
-            alert("You are a HOEwner, you can use the DEX and Loans features.");
-            listenToLoanCreation();  
+            alert("You are a HOEwner, you can update stuff every 10 mins.");
             setInterval(async () => {
                 await smartCheckLoan();
             }, 10 * 60 * 1000); 
@@ -171,18 +171,18 @@ async function setDexSwapRate() {
 
 // ========================================= Loan Operations =========================================
 
-async function loan(dexAmount, deadlineMinutes) {
+async function loan(dexAmount, deadlineYears) {
     const accounts = await window.ethereum.request({
         method: "eth_requestAccounts",
     });
     const account = accounts[0];
 
-    // Converte o valor de DEX para wei (18 casas decimais)
+    // Convert the DEX amount to Wei (18 decimal places)
     const dexAmountWei = web3_ganache.utils.toWei(dexAmount.toString(), "ether");
 
-    // Calcula o deadline como timestamp atual + minutos informados
+    // Calculate the deadline as the current timestamp + years converted to seconds
     const now = Math.floor(Date.now() / 1000);
-    const deadline = now + (parseInt(deadlineMinutes) * 60);
+    const deadline = now + (parseInt(deadlineYears) * 365 * 24 * 60 * 60); // Convert years to seconds
 
     if (isNaN(dexAmountWei) || BigInt(dexAmountWei) <= 0n) {
         console.error("Invalid DEX amount:", dexAmountWei);
@@ -198,7 +198,7 @@ async function loan(dexAmount, deadlineMinutes) {
         console.log("Requesting loan for account:", account, "with amount:", dexAmountWei, "and deadline:", deadline);
         const loanResult = await defi_contract.methods.loan(dexAmountWei, deadline).send({
             from: account,
-            gas: 300000, // Ajuste o limite de gás conforme necessário
+            gas: 300000, // Adjust the gas limit as needed
         });
 
         // Access the loanId from the transaction receipt
@@ -246,11 +246,14 @@ async function makePayment(loanId, paymentAmount) {
         return;
     }
 
+    const amount = await getPaymentAmount(loanId);
+    console.log("Payment amount fetched:", amount);
+
     try {
         console.log("Making payment for loan:", paymentLoanDropdownDict[loanId], "with amount:", paymentAmount);
         const paymentResult = await defi_contract.methods.makePayment(loanId).send({
             from: account,
-            value: web3_ganache.utils.toWei(paymentAmount.toString(), "ether"),
+            value: web3_ganache.utils.toWei(amount.toString(), "ether"),
             gas: 3000000, // Adjust gas limit as needed
         });
         console.log("Payment made successfully:", paymentResult);
@@ -472,7 +475,7 @@ async function mintNFT() {
     }
 }
 
-// ==================================== Getters for balances ====================================
+// ==================================== Getters ====================================
 
 async function getDexBalance() {
     try {
@@ -512,6 +515,25 @@ async function getUserDexBalance() {
     }
 }
 
+async function getTokensToPay() {
+    try {
+        console.log("Calling sumETHamounts function...");
+        const totalETHDue = await defi_contract.methods.sumETHamounts().call();
+        const totalETHDueInEther = web3_ganache.utils.fromWei(totalETHDue, "ether");
+
+        // Update the UI or log the result
+        console.log(`Total ETH due for active loans: ${totalETHDueInEther} ETH`);
+        document.getElementById("tokensToPayOutput").innerText = 
+            `Total ETH due for active loans: ${totalETHDueInEther} ETH`;
+
+        return totalETHDueInEther;
+    } catch (error) {
+        console.error("Error calling sumETHamounts function:", error);
+        document.getElementById("tokensToPayOutput").innerText = 
+            "Error fetching total ETH due for active loans.";
+    }
+}
+
 async function getRateEthToDex() {
     try {
         const rate = await defi_contract.methods.getDexSwapRate().call();
@@ -537,7 +559,25 @@ async function callIsHoe() {
     } catch (error) {
         console.error("Error calling isHoe function:", error);
     }
-}        
+} 
+
+async function getPaymentAmount(loanId) {
+    try {
+        console.log(`Fetching payment amount for loan ID: ${loanId}`);
+        
+        // Call the contract function
+        const paymentAmountWei = await defi_contract.methods.getPaymentAmount(loanId).call();
+        
+        // Convert the payment amount from Wei to Ether for better readability
+        const paymentAmountEth = web3_ganache.utils.fromWei(paymentAmountWei, "ether");
+        
+        console.log(`Payment amount for loan ID ${loanId}: ${paymentAmountEth} ETH`);
+
+        return paymentAmountEth;
+    } catch (error) {
+        console.error(`Error fetching payment amount for loan ID ${loanId}:`, error);
+    }
+}
 
 // ============================================ Event Listeners ====================================
 
@@ -554,15 +594,27 @@ async function listenToLoanCreation() {
 
             try {
                 const loan = await defi_contract.methods.getLoanDetails(loanId).call(); // Fetch loan details
-                console.log("Loan details fetched:", loan);
-
-                loan_dict[loanId] = loan; // Add the new loan to the dictionary
-                console.log("New loan added to loan_dict:", loanId, loan);
                 
-                alert(`New loan created with ID: ${loanId}\nDetails: ${JSON.stringify(loan)}`);
-                // Update the UI
-                await populatePaymentDropdown();
-                updateLoanDictList();
+                const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+                const account = accounts[0];
+
+                // Add if its the borrower
+                if (account.toLowerCase() === loan.borrower.toLowerCase()) {
+                    console.log("Loan details fetched:", loan);
+
+                    loan_dict[loanId] = loan; // Add the new loan to the dictionary
+                    console.log("New loan added to loan_dict:", loanId, loan);
+                    
+                    // Update the UI
+                    await populatePaymentDropdown();
+                    updateLoanDictList();
+                }
+
+                // Notify the user if they are the owner of the contract
+                if (isHoe) {
+                    alert(`New loan created with ID: ${loanId}\nDetails: ${JSON.stringify(loan)}`);
+                }
+
             } catch (error) {
                 console.error("Error fetching loan details for loanId:", loanId, error);
             }
@@ -953,6 +1005,8 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
-    listenToNftMinting();
     
+
+    listenToNftMinting();
+    listenToLoanCreation();  
 });

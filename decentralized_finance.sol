@@ -35,9 +35,7 @@ contract DecentralizedFinance is ERC20 {
     
     // --------------------- Mapping ---------------------
     mapping(uint256 => Loan) public loans; // loanId => Loan
-    mapping(uint256 => bool) public used_nft;
-    // mapping(uint256 => uint256) public numberOfPayments; // loanId => number of payments made
-    // mapping(uint256 => uint256) public loanStartTime; // loanId => number of payments made
+    mapping(uint256 => bool) public used_nft; // nftId => bool, to check if the NFT is already used in a loan request
 
     // --------------------- Events ---------------------
     event loanCreated(uint256 loanId);
@@ -51,10 +49,10 @@ contract DecentralizedFinance is ERC20 {
         _mint(address(this), 10**24);
         owner = msg.sender;   
         dexSwapRate = _rate;
-        periodicity = _periodicity * 1 days; // In seconds
+        periodicity = _periodicity * 1 days;
         interest = _interest;
         termination = _termination;
-        maxLoanDuration = 30 days;
+        maxLoanDuration = 2 years;
         loanCount = 0;
     }
 
@@ -84,7 +82,7 @@ contract DecentralizedFinance is ERC20 {
         uint256 loanId = uint256(loanCount);
 
         loans[loanId] = Loan({
-            deadline: deadline,
+            deadline: deadline, 
             amount: ethAmount,
             lender: address(this),
             borrower: msg.sender,
@@ -96,8 +94,6 @@ contract DecentralizedFinance is ERC20 {
             nftId: 0 
         });
 
-        // numberOfPayments[loanId] = 0; // Initialize the number of payments made for this loan
-        // loanStartTime[loanId] = block.timestamp; // Store the start time of the loan
         payable(msg.sender).transfer(ethAmount); // Transfer ETH to the borrower
         loanCount++;
         emit loanCreated(loanId);
@@ -112,33 +108,25 @@ contract DecentralizedFinance is ERC20 {
         Loan storage loanPayment = loans[loanId];
         bool checked = checkLoan(loanId);
         
-        // Return money if the loan is not active
-        if (loanPayment.active == false) {
+        if (loanPayment.active == false) { // Return money if the loan is not active
             if (msg.value > 0) {
                 payable(msg.sender).transfer(msg.value);
             }
-            return; 
+            return;
         }
 
         if (checked) {
-            // uint256 time = loanPayment.deadline - loanStartTime[loanId];
-            // uint256 duration = (loanPayment.deadline - loanStartTime[loanId]) * 1e18 / (365 * 24 * 60 * 60);
-            uint256 time = loanPayment.deadline - loanPayment.startTime; 
-            uint256 duration = time * 1e18 / (365 * 24 * 60 * 60); 
-            uint256 interestPayment = (loanPayment.amount * interest * duration) / (100 * 1e18);
-            uint256 value = msg.value;
-
-            // "Print" values to Remix log
-            emit Debug(duration, interestPayment, value, time);
-
-            require(msg.value >= interestPayment, "Insufficient payment amount");
-            // numberOfPayments[loanId]++;
+            uint256 payment_amount = getPaymentAmount(loanId);
+            require(msg.value >= payment_amount, "Insufficient payment amount");
             loanPayment.numberOfPayments += 1; 
-
-            if (msg.value > interestPayment) {
+            if (msg.value > interestPayment) { // Return the excess amount to the sender
                 payable(msg.sender).transfer(msg.value - interestPayment);
             }
-        } 
+            if (loanPayment.isBasedNFT) { // Foward the payment to the lender and transfer the NFT back to the borrower
+                require(loanPayment.lender != address(0), "No lender for this NFT loan, The Loan hasnt been funded yet");
+                payable(loanPayment.lender).transfer(payment_amount); // Transfer the payment to the lender
+            }
+        }
         checked = checkLoan(loanId);
     }
 
@@ -152,13 +140,11 @@ contract DecentralizedFinance is ERC20 {
             require(loanCheck.borrower == msg.sender, "Not the borrower");
         }
 
-        // uint256 numberPayments = numberOfPayments[loanId]; // Number of payments made
         uint256 numberPayments = loanCheck.numberOfPayments; // Number of payments made
-        // uint256 time_passed = block.timestamp - loanStartTime[loanId]; // Time passed since the loan was created
         uint256 time_passed = block.timestamp - loanCheck.startTime; // Time passed since the loan was created
         uint256 current_suposed_payment = (time_passed / periodicity); // Calculate the current supposed payment based on the periodicity and time passed 
 
-        // uint256 finished = (loanCheck.deadline - loanStartTime[loanId]) / periodicity;
+        uint256 full_time = loanCheck.deadline - loanCheck.startTime; // Total time of the loan
         uint256 nToFinish = (loanCheck.deadline - loanCheck.startTime) / periodicity; 
         if ((loanCheck.deadline - loanCheck.startTime) < periodicity) {
             nToFinish = 1; 
@@ -191,10 +177,6 @@ contract DecentralizedFinance is ERC20 {
         return true;
     }
 
-    function getLoanDetails(uint256 loanId) external view returns (Loan memory) {
-        return loans[loanId];
-    }
-
     function terminateLoan(uint256 loanId) external payable {
         Loan storage activeLoan = loans[loanId];
 
@@ -219,56 +201,7 @@ contract DecentralizedFinance is ERC20 {
         if (msg.value > total) {
             payable(msg.sender).transfer(msg.value - total);
         }
-    }
-
-    function getValueToTerminateLoan(uint256 loanId) external view returns (uint256) {
-        Loan storage activeLoan = loans[loanId];
-        require(activeLoan.active, "Loan already terminated or does not exist");
-        require(activeLoan.borrower == msg.sender, "Not the borrower");
-        require(!activeLoan.isBasedNFT, "NFT-based loans must use a different function");
-
-        uint256 fee = (activeLoan.amount * termination) / 100;
-        return activeLoan.amount + fee; // Return the total amount to terminate the loan
-    }
-
-    function setDexSwapRate(uint256 newRate) external {
-        require(msg.sender == owner, "Only owner can set the DEX swap rate");
-        require(newRate > 0, "New rate must be greater than 0");
-        dexSwapRate = newRate;
-    }
-
-    function getBalance() public view returns (uint256) {
-        return address(this).balance;
-    }
-
-    function getDexBalance() public view returns (uint256) {
-        return balanceOf(address(this));
-    }
-
-    function getDexSwapRate() external view returns (uint256) {
-        return dexSwapRate;
-    }
-
-    // TODO: Não sei se podemos fazer isso
-    function getLoanRequests() external view returns (uint256[] memory, Loan[] memory) {
-        uint256 count = 0;
-        for (uint256 i = 0; i < loanCount; i++) {
-            if (loans[i].isBasedNFT && loans[i].lender == address(0)) {
-                count++;
-            }
-        }
-        uint256[] memory ids = new uint256[](count);
-        Loan[] memory result = new Loan[](count);
-        uint256 idx = 0;
-        for (uint256 i = 0; i < loanCount; i++) {
-            if (loans[i].isBasedNFT && loans[i].lender == address(0)) {
-                ids[idx] = i;
-                result[idx] = loans[i];
-                idx++;
-            }
-        }
-        return (ids, result);
-    }
+    }    
 
     function makeLoanRequestByNft(IERC721 nftContract, uint256 nftId, uint256 loanAmount, uint256 deadline) external {
         require(loanAmount > 0, "Loan amount must be greater than 0");
@@ -354,6 +287,91 @@ contract DecentralizedFinance is ERC20 {
         return type(uint256).max;
     }
 
+    function smart_checkLoan() external {
+        require( msg.sender == owner, "Only owner can call this function");
+        for (uint256 i = 0; i < loanCount; i++) {
+            if (loans[i].active) {
+                checkLoan(i);
+            }
+        }
+    }
+
+    // TODO: Rever
+    function sumETHamounts() external view returns (uint256) {
+        uint256 total = 0;
+        for (uint256 i = 0; i < loanCount; i++) {
+            Loan storage loanETH = loans[i];
+            if (loanETH.active && loanETH.borrower == msg.sender) {
+                uint256 paymentsDue = (loanETH.deadline - loanETH.startTime) / periodicity;
+                if (periodicity == 0 || duration == 0) { // TODO: idk
+                    continue; // Skip to avoid division by zero
+                }
+                if ((loanETH.deadline - loanETH.startTime) < periodicity) {
+                    paymentsDue = 1;
+                }
+                uint256 paid = 0;
+                if (paymentsDue > 0) {
+                    paid = (loanETH.amount * loanETH.numberOfPayments) / paymentsDue;
+                }
+                uint256 remaining = loanETH.amount > paid ? loanETH.amount - paid : 0;
+                total += remaining;
+            }
+        }
+        return total;
+    }
+
+    // --------------------- Getters and Setters ---------------------
+
+    function getBalance() public view returns (uint256) {
+        return address(this).balance;
+    }
+
+    function getDexBalance() public view returns (uint256) {
+        return balanceOf(address(this));
+    }
+
+    function getDexSwapRate() external view returns (uint256) {
+        return dexSwapRate;
+    }
+
+    function isHoe() external view returns (bool) {
+        return msg.sender == owner;
+    }
+
+    function getLoanDetails(uint256 loanId) external view returns (Loan memory) {
+        return loans[loanId];
+    }
+
+    function getValueToTerminateLoan(uint256 loanId) external view returns (uint256) {
+        Loan storage activeLoan = loans[loanId];
+        require(activeLoan.active, "Loan already terminated or does not exist");
+        require(activeLoan.borrower == msg.sender, "Not the borrower");
+        require(!activeLoan.isBasedNFT, "NFT-based loans must use a different function");
+
+        uint256 fee = (activeLoan.amount * termination) / 100;
+        return activeLoan.amount + fee; // Return the total amount to terminate the loan
+    }
+
+    function getLoanRequests() external view returns (uint256[] memory, Loan[] memory) {
+        uint256 count = 0;
+        for (uint256 i = 0; i < loanCount; i++) {
+            if (loans[i].isBasedNFT && loans[i].lender == address(0)) {
+                count++;
+            }
+        }
+        uint256[] memory ids = new uint256[](count);
+        Loan[] memory result = new Loan[](count);
+        uint256 idx = 0;
+        for (uint256 i = 0; i < loanCount; i++) {
+            if (loans[i].isBasedNFT && loans[i].lender == address(0)) {
+                ids[idx] = i;
+                result[idx] = loans[i];
+                idx++;
+            }
+        }
+        return (ids, result);
+    }
+
     function getLoansByBorrower() external view returns (Loan[] memory) {
         uint256 count = 0;
 
@@ -379,16 +397,22 @@ contract DecentralizedFinance is ERC20 {
         return borrowerLoans;
     }
 
-    function smart_checkLoan() external {
-        require( msg.sender == owner, "Only owner can call this function");
-        for (uint256 i = 0; i < loanCount; i++) {
-            if (loans[i].active) {
-                checkLoan(i);
-            }
-        }
+    function getPaymentAmount (uint256 loanId) external view returns (uint256) {
+        Loan storage loanPayment = loans[loanId];
+        require(loanPayment.active, "Loan does not exist or has been terminated");
+
+        uint256 time = loanPayment.deadline - loanPayment.startTime; 
+        uint256 duration = time * 1e18 / (365 * 24 * 60 * 60); 
+        uint256 interestPayment = (loanPayment.amount * interest * duration) / (100 * 1e18); 
+
+        uint256 amount_of_payments = (loanPayment.deadline - loanPayment.startTime) / periodicity; 
+        uint256 normalized_payment = loanPayment.amount / amount_of_payments;
+        return interestPayment + normalized_payment; // Return the total payment amount including interest
     }
 
-    function isHoe() external view returns (bool) {
-        return msg.sender == owner;
+    function setDexSwapRate(uint256 newRate) external {
+        require(msg.sender == owner, "Only owner can set the DEX swap rate");
+        require(newRate > 0, "New rate must be greater than 0");
+        dexSwapRate = newRate;
     }
 }

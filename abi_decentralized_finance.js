@@ -658,6 +658,25 @@ export const defi_abi = [
 				"type": "uint256"
 			}
 		],
+		"name": "getPaymentAmount",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "loanId",
+				"type": "uint256"
+			}
+		],
 		"name": "getValueToTerminateLoan",
 		"outputs": [
 			{
