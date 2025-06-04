@@ -1,9 +1,9 @@
 const web3_ganache = new Web3(new Web3.providers.WebsocketProvider('ws://127.0.0.1:8545'));
-const defi_contractAddress = "0x760bE15afb1CCA0c4F02Aa02a5840b6a708dA31e";
+const defi_contractAddress = "0xaC4fc7ef7748C213Ab7451eF09Dcf15b766b1084";
 import { defi_abi } from "./abi_decentralized_finance.js";
 const defi_contract = new web3_ganache.eth.Contract(defi_abi, defi_contractAddress);
 
-const nft_contractAddress = "0x433345c729470267f1d45775259Eb5C9f2996c1f";
+const nft_contractAddress = "0xf5F919b6C778F22A6341415A9Fcb86d274E0B35C";
 import { nft_abi } from "./abi_nft.js";
 const nft_contract = new web3_ganache.eth.Contract(nft_abi, nft_contractAddress);
 
